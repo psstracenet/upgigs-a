@@ -98,12 +98,24 @@ Example:
   });
 
   const content = response.choices[0].message.content;
-  console.log("🧠 OpenAI response:\n", content);
+  console.log("🧠 OpenAI responded:");
+  console.log("-----");
+  console.log(content);
+  console.log("-----");
 
   try {
+    if (!content || content.trim() === "") {
+      console.error("⚠️ OpenAI returned an empty response.");
+      return null;
+    }
+
     return JSON.parse(content);
   } catch (err) {
-    console.error("❌ Failed to parse OpenAI response:\n", content);
+    console.log("🧠 OpenAI responded:");
+    console.log("-----");
+    console.log(content);
+    console.log("-----");
+
     return null;
   }
 }
