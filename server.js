@@ -3,20 +3,29 @@ const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
 const { OpenAI } = require("openai");
-const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenX107";
 
 const app = express();
 const PORT = process.env.PORT || 3100;
+const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenXYZ";
 
+// Middleware
 app.use(cors());
 app.use(express.json());
+
+// ✅ Serve Eleventy static files
 app.use(express.static(path.join(__dirname, "dist")));
 
+// OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Health check route
+// Health check
+app.get("/", (req, res) => {
+  res.send("🎸 UpGigs API is alive!");
+});
+
+// 🔐 AI-powered endpoint with token auth
 app.post("/api/parse-and-add", async (req, res) => {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.replace("Bearer ", "");
@@ -31,16 +40,15 @@ app.post("/api/parse-and-add", async (req, res) => {
   }
 
   try {
-    const parsedGig = await callOpenAI(message); //
+    const parsedGig = await callOpenAI(message);
 
-    if (!parsedGig) {
+    if (!parsedGig || parsedGig.error) {
       return res
         .status(422)
         .json({ error: "OpenAI returned invalid or unparseable JSON." });
     }
 
     const gigsPath = path.join(__dirname, "_data", "gigs.json");
-
     fs.readFile(gigsPath, "utf8", (err, data) => {
       if (err)
         return res.status(500).json({ error: "Failed to read gigs.json" });
@@ -60,7 +68,7 @@ app.post("/api/parse-and-add", async (req, res) => {
   }
 });
 
-// POST route to add a gig directly via JSON
+// 🔁 Direct gig input endpoint
 app.post("/api/add-gig", (req, res) => {
   const newGig = req.body;
   const gigsPath = path.join(__dirname, "_data", "gigs.json");
@@ -79,14 +87,18 @@ app.post("/api/add-gig", (req, res) => {
   });
 });
 
-// OpenAI gig parser
+// 🧠 OpenAI gig extractor
 async function callOpenAI(prompt) {
-  const systemPrompt = `You are a JSON API. Extract the gig details from the message below.
-Respond ONLY with a single line of raw JSON, using these exact keys:
-"date", "venue", "city", "time". Do NOT include any text before or after the JSON.
+  const systemPrompt = `
+You are a strict JSON API that extracts gig information from messages.
 
-Example:
-{"date":"2025-08-20","venue":"The Fillmore","city":"San Francisco","time":"9:00 PM"}`;
+Respond ONLY with a single line of raw JSON using:
+{"date":"2025-10-01","venue":"Baby's All Right","city":"Brooklyn","time":"7:30 PM"}
+
+Required fields: date, venue, city, time.
+If unparseable, return: {"error":"unparseable"}
+DO NOT include any explanation, formatting, or extra lines.
+`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
@@ -98,29 +110,25 @@ Example:
   });
 
   const content = response.choices[0].message.content;
+
   console.log("🧠 OpenAI responded:");
   console.log("-----");
   console.log(content);
   console.log("-----");
 
-  try {
-    if (!content || content.trim() === "") {
-      console.error("⚠️ OpenAI returned an empty response.");
-      return null;
-    }
+  if (!content || content.trim() === "") {
+    console.error("⚠️ OpenAI returned an empty response.");
+    return null;
+  }
 
+  try {
     return JSON.parse(content);
   } catch (err) {
-    console.log("🧠 OpenAI responded:");
-    console.log("-----");
-    console.log(content);
-    console.log("-----");
-
+    console.error("❌ Failed to parse OpenAI response:\n", content);
     return null;
   }
 }
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server listening at http://localhost:${PORT}`);
 });
