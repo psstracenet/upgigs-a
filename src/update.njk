@@ -1,3 +1,9 @@
+---
+layout: base.njk
+title: Update
+permalink: /update/index.html
+---
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -31,9 +37,12 @@
         const message = document.getElementById("gig-message").value.trim();
         resultBox.textContent = "Sending to AI...";
 
-        const res = await fetch("http://localhost:3100/api/parse-and-add", {
+        fetch("https://up-gigs-production.up.railway.app/api/parse-and-add", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer gigs2025tokenX107",
+          },
           body: JSON.stringify({ message }),
         });
 
