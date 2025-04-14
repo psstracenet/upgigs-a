@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
 const { OpenAI } = require("openai");
+const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenXYZ";
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -15,14 +16,15 @@ const openai = new OpenAI({
 });
 
 // Health check route
-app.get("/", (req, res) => {
-  res.send("🎸 UpGigs API is alive!");
-});
-
-// POST route to parse a natural language message and add a gig
 app.post("/api/parse-and-add", async (req, res) => {
-  const { message } = req.body;
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.replace("Bearer ", "");
 
+  if (token !== SECRET_TOKEN) {
+    return res.status(403).json({ error: "Forbidden: Invalid token" });
+  }
+
+  const { message } = req.body;
   if (!message) {
     return res.status(400).json({ error: "No message provided." });
   }
