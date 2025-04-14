@@ -4,18 +4,18 @@ const path = require("path");
 const cors = require("cors");
 const { OpenAI } = require("openai");
 
+console.log("👀 server.js starting...");
+
 const app = express();
 const PORT = process.env.PORT || 3100;
 const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenXYZ";
 
-// Middleware
 app.use(cors());
 app.use(express.json());
-
-// ✅ Serve Eleventy static files
 app.use(express.static(path.join(__dirname, "dist")));
 
-// OpenAI client
+console.log("🔧 Middleware and static serving initialized.");
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -25,12 +25,16 @@ app.get("/", (req, res) => {
   res.send("🎸 UpGigs API is alive!");
 });
 
-// 🔐 AI-powered endpoint with token auth
+console.log("🔧 Registering /api/parse-and-add route...");
+
 app.post("/api/parse-and-add", async (req, res) => {
+  console.log("📩 Received parse-and-add request:", req.body);
+
   const authHeader = req.headers.authorization || "";
   const token = authHeader.replace("Bearer ", "");
 
   if (token !== SECRET_TOKEN) {
+    console.warn("🚫 Invalid token received");
     return res.status(403).json({ error: "Forbidden: Invalid token" });
   }
 
@@ -40,35 +44,44 @@ app.post("/api/parse-and-add", async (req, res) => {
   }
 
   try {
+    console.log("🧠 Calling OpenAI with prompt:", message);
     const parsedGig = await callOpenAI(message);
 
     if (!parsedGig || parsedGig.error) {
+      console.error("⚠️ OpenAI returned invalid response.");
       return res
         .status(422)
         .json({ error: "OpenAI returned invalid or unparseable JSON." });
     }
 
     const gigsPath = path.join(__dirname, "_data", "gigs.json");
+
     fs.readFile(gigsPath, "utf8", (err, data) => {
-      if (err)
+      if (err) {
+        console.error("❌ Failed to read gigs.json:", err);
         return res.status(500).json({ error: "Failed to read gigs.json" });
+      }
 
       const gigs = JSON.parse(data);
       gigs.push(parsedGig);
 
+      console.log("💾 Writing updated gigs.json...");
       fs.writeFile(gigsPath, JSON.stringify(gigs, null, 2), (err) => {
-        if (err)
+        if (err) {
+          console.error("❌ Failed to write gigs.json:", err);
           return res.status(500).json({ error: "Failed to write gigs.json" });
+        }
+
+        console.log("✅ Gig saved:", parsedGig);
         res.json({ success: true, gig: parsedGig });
       });
     });
   } catch (error) {
-    console.error("OpenAI error:", error);
+    console.error("🔥 Error in /api/parse-and-add:", error);
     res.status(500).json({ error: "Failed to parse message using OpenAI." });
   }
 });
 
-// 🔁 Direct gig input endpoint
 app.post("/api/add-gig", (req, res) => {
   const newGig = req.body;
   const gigsPath = path.join(__dirname, "_data", "gigs.json");
@@ -87,13 +100,12 @@ app.post("/api/add-gig", (req, res) => {
   });
 });
 
-// 🧠 OpenAI gig extractor
 async function callOpenAI(prompt) {
   const systemPrompt = `
-  You are a strict JSON generator. Only reply with this format:
-  {"date":"2025-10-02","venue":"The Bluebird","city":"Nashville","time":"8:30 PM"}
-  No explanations. Just one line of raw JSON.
-  `;
+You are a strict JSON generator. Only respond with this format:
+{"date":"2025-10-02","venue":"The Bluebird","city":"Nashville","time":"8:30 PM"}
+Return valid one-line JSON. No other text. If unparseable, return: {"error":"unparseable"}
+`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
@@ -136,11 +148,10 @@ app
     console.error("💥 Failed to bind server:", err);
   });
 
-// Catch uncaught errors so Railway logs them
+// 🔐 Catch unexpected runtime crashes
 process.on("uncaughtException", (err) => {
   console.error("💥 Uncaught Exception:", err);
 });
-
 process.on("unhandledRejection", (reason) => {
   console.error("💥 Unhandled Promise Rejection:", reason);
 });
