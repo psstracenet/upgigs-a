@@ -7,19 +7,19 @@ const { OpenAI } = require("openai");
 const app = express();
 const PORT = process.env.PORT || 3100;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Initialize OpenAI
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-// Health check
+// Health check route
 app.get("/", (req, res) => {
   res.send("🎸 UpGigs API is alive!");
 });
 
-// Parse + add route
+// POST route to parse a natural language message and add a gig
 app.post("/api/parse-and-add", async (req, res) => {
   const { message } = req.body;
 
@@ -29,13 +29,14 @@ app.post("/api/parse-and-add", async (req, res) => {
 
   try {
     const parsedGig = await callOpenAI(message);
-    const gigsPath = path.join(__dirname, "_data", "gigs.json");
 
     if (!parsedGig) {
       return res
         .status(422)
         .json({ error: "OpenAI returned invalid or unparseable JSON." });
     }
+
+    const gigsPath = path.join(__dirname, "_data", "gigs.json");
 
     fs.readFile(gigsPath, "utf8", (err, data) => {
       if (err)
@@ -50,13 +51,13 @@ app.post("/api/parse-and-add", async (req, res) => {
         res.json({ success: true, gig: parsedGig });
       });
     });
-  } catch (err) {
-    console.error("❌ Failed to parse OpenAI response:\n", content);
-    return null; // Don't crash app, return null
+  } catch (error) {
+    console.error("OpenAI error:", error);
+    res.status(500).json({ error: "Failed to parse message using OpenAI." });
   }
 });
 
-// Direct add route
+// POST route to add a gig directly via JSON
 app.post("/api/add-gig", (req, res) => {
   const newGig = req.body;
   const gigsPath = path.join(__dirname, "_data", "gigs.json");
@@ -75,15 +76,14 @@ app.post("/api/add-gig", (req, res) => {
   });
 });
 
-// OpenAI call logic
-
+// OpenAI gig parser
 async function callOpenAI(prompt) {
   const systemPrompt = `You are a JSON API. Extract the gig details from the message below.
-  Respond ONLY with a single line of raw JSON, using these exact keys:
-  "date", "venue", "city", "time". Do NOT include any text before or after the JSON.
-  
-  Example:
-  {"date":"2025-08-20","venue":"The Fillmore","city":"San Francisco","time":"9:00 PM"}`;
+Respond ONLY with a single line of raw JSON, using these exact keys:
+"date", "venue", "city", "time". Do NOT include any text before or after the JSON.
+
+Example:
+{"date":"2025-08-20","venue":"The Fillmore","city":"San Francisco","time":"9:00 PM"}`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
@@ -100,7 +100,7 @@ async function callOpenAI(prompt) {
   try {
     return JSON.parse(content);
   } catch (err) {
-    console.error("❌ Failed to parse OpenAI response:\n", content); // ✅ now defined
+    console.error("❌ Failed to parse OpenAI response:\n", content);
     return null;
   }
 }
