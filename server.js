@@ -90,9 +90,10 @@ app.post("/api/add-gig", (req, res) => {
 // 🧠 OpenAI gig extractor
 async function callOpenAI(prompt) {
   const systemPrompt = `
-  You are a strict JSON generator. Respond only with this structure:
+  You are a strict JSON generator. Only reply with this format:
   {"date":"2025-10-02","venue":"The Bluebird","city":"Nashville","time":"8:30 PM"}
-  No extra text, just valid JSON.`;
+  No explanations. Just one line of raw JSON.
+  `;
 
   const response = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
@@ -103,28 +104,26 @@ async function callOpenAI(prompt) {
     ],
   });
 
-  // ✅ Add this full response log:
+  const rawContent = response.choices[0].message.content;
+
   console.log(
     "🔎 Raw OpenAI full response:\n",
     JSON.stringify(response, null, 2)
   );
-
-  const content = response.choices[0].message.content;
-
   console.log("🧠 OpenAI responded:");
   console.log("-----");
-  console.log(content);
+  console.log(rawContent);
   console.log("-----");
 
-  if (!content || content.trim() === "") {
+  if (!rawContent || rawContent.trim() === "") {
     console.error("⚠️ OpenAI returned an empty response.");
     return null;
   }
 
   try {
-    return JSON.parse(content);
+    return JSON.parse(rawContent);
   } catch (err) {
-    console.error("❌ Failed to parse OpenAI response:\n", content);
+    console.error("❌ Failed to parse OpenAI response:\n", rawContent);
     return null;
   }
 }
