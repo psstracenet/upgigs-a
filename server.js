@@ -1,14 +1,21 @@
-const express = require("express");
-const fs = require("fs");
-const path = require("path");
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
-const cors = require("cors");
+// const express = require("express");
+// const fs = require("fs");
+// const path = require("path");
+// const fetch = (...args) =>
+//   import("node-fetch").then(({ default: fetch }) => fetch(...args));
+// const cors = require("cors");
 
-const app = express(); // ✅ Declare app first
+// const app = express(); // ✅ Declare app first
 
-app.use(cors()); // ✅ Then apply CORS
-app.use(express.json()); // ✅ Then use JSON middleware
+// app.use(cors()); // ✅ Then apply CORS
+// app.use(express.json()); // ✅ Then use JSON middleware
+
+import express from "express";
+import fs from "fs";
+import path from "path";
+import cors from "cors";
+import fetch from "node-fetch";
+import { OpenAI } from "openai";
 
 const PORT = process.env.PORT || 3100;
 
@@ -38,8 +45,7 @@ const { OpenAI } = require("openai");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function callOpenAI(prompt) {
-  const systemPrompt = `You are a JSON API that extracts gig info from plain text. Respond with a single JSON object using keys: date, venue, city, time. No explanations or formatting. Example:
-{"date":"2025-07-05","venue":"The Mint","city":"Los Angeles","time":"9:00 PM"}`;
+  const systemPrompt = `You are a JSON API that extracts gig info from plain text...`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
