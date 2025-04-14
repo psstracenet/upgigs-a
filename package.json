@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "main": ".eleventy.js",
   "scripts": {
-    "start": "eleventy --serve"
-  },
+  "start": "node server.js",
+  "build": "eleventy"
+},
+
+  
   "keywords": [],
   "author": "",
   "license": "ISC",
