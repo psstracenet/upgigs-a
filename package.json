@@ -2,10 +2,11 @@
   "name": "upgigs",
   "version": "1.0.0",
   "main": ".eleventy.js",
-  "scripts": {
-    "start": "node server.js",
-    "build": "eleventy"
-  },
+ "scripts": {
+  "build": "eleventy --input=src --output=dist",
+  "start": "npm run build && node server.js",
+  "local": "eleventy --serve"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
