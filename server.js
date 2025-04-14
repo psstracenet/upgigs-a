@@ -76,13 +76,14 @@ app.post("/api/add-gig", (req, res) => {
 });
 
 // OpenAI call logic
+
 async function callOpenAI(prompt) {
   const systemPrompt = `You are a JSON API. Extract the gig details from the message below.
-    Respond ONLY with a single line of raw JSON, using these exact keys:
-    "date", "venue", "city", "time". Do NOT include any text before or after the JSON.
-    
-    Example:
-    {"date":"2025-08-20","venue":"The Fillmore","city":"San Francisco","time":"9:00 PM"}`;
+  Respond ONLY with a single line of raw JSON, using these exact keys:
+  "date", "venue", "city", "time". Do NOT include any text before or after the JSON.
+  
+  Example:
+  {"date":"2025-08-20","venue":"The Fillmore","city":"San Francisco","time":"9:00 PM"}`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
@@ -99,7 +100,8 @@ async function callOpenAI(prompt) {
   try {
     return JSON.parse(content);
   } catch (err) {
-    throw new Error("Invalid JSON from OpenAI:\n" + content);
+    console.error("❌ Failed to parse OpenAI response:\n", content); // ✅ now defined
+    return null;
   }
 }
 
