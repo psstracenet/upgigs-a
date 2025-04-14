@@ -10,7 +10,7 @@ const app = express(); // ✅ Declare app first
 app.use(cors()); // ✅ Then apply CORS
 app.use(express.json()); // ✅ Then use JSON middleware
 
-const PORT = 3100;
+const PORT = process.env.PORT || 3100;
 
 // --- AI parser using Ollama + deepseek-r1:7b ---
 async function callOllamaDeepseek(prompt) {
