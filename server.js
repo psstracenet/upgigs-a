@@ -90,19 +90,9 @@ app.post("/api/add-gig", (req, res) => {
 // 🧠 OpenAI gig extractor
 async function callOpenAI(prompt) {
   const systemPrompt = `
-    You are a strict JSON generator.
-    
-    Given a message about a music gig, respond with a single valid JSON object only.
-    Your entire response must be exactly one line, like this:
-    
-    {"date":"2025-10-01","venue":"Baby's All Right","city":"Brooklyn","time":"7:30 PM"}
-    
-    Only use keys: "date", "venue", "city", and "time".
-    
-    If the input is unclear, return: {"error":"unparseable"}
-    
-    Do not say anything else. No text, no markdown, no explanation.
-    Only return raw JSON on one line.`;
+  You are a strict JSON generator. Respond only with this structure:
+  {"date":"2025-10-02","venue":"The Bluebird","city":"Nashville","time":"8:30 PM"}
+  No extra text, just valid JSON.`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
@@ -112,6 +102,12 @@ async function callOpenAI(prompt) {
       { role: "user", content: prompt },
     ],
   });
+
+  // ✅ Add this full response log:
+  console.log(
+    "🔎 Raw OpenAI full response:\n",
+    JSON.stringify(response, null, 2)
+  );
 
   const content = response.choices[0].message.content;
 
