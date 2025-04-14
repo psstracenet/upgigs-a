@@ -90,15 +90,19 @@ app.post("/api/add-gig", (req, res) => {
 // 🧠 OpenAI gig extractor
 async function callOpenAI(prompt) {
   const systemPrompt = `
-You are a strict JSON API that extracts gig information from messages.
-
-Respond ONLY with a single line of raw JSON using:
-{"date":"2025-10-01","venue":"Baby's All Right","city":"Brooklyn","time":"7:30 PM"}
-
-Required fields: date, venue, city, time.
-If unparseable, return: {"error":"unparseable"}
-DO NOT include any explanation, formatting, or extra lines.
-`;
+    You are a strict JSON generator.
+    
+    Given a message about a music gig, respond with a single valid JSON object only.
+    Your entire response must be exactly one line, like this:
+    
+    {"date":"2025-10-01","venue":"Baby's All Right","city":"Brooklyn","time":"7:30 PM"}
+    
+    Only use keys: "date", "venue", "city", and "time".
+    
+    If the input is unclear, return: {"error":"unparseable"}
+    
+    Do not say anything else. No text, no markdown, no explanation.
+    Only return raw JSON on one line.`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
