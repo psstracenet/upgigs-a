@@ -3,13 +3,14 @@ const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
 const { OpenAI } = require("openai");
-const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenXYZ";
+const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenX107";
 
 const app = express();
 const PORT = process.env.PORT || 3100;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "dist")));
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -30,7 +31,7 @@ app.post("/api/parse-and-add", async (req, res) => {
   }
 
   try {
-    const parsedGig = await callOpenAI(message);
+    const parsedGig = await callOpenAI(message); //
 
     if (!parsedGig) {
       return res
