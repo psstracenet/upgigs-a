@@ -118,6 +118,10 @@ app.post("/api/add-gig", (req, res) => {
   });
 });
 
+app.get("/", (req, res) => {
+  res.send("🎸 UpGigs API is alive!");
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening at http://localhost:${PORT}`);
 });
