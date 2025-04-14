@@ -128,6 +128,19 @@ async function callOpenAI(prompt) {
   }
 }
 
-app.listen(PORT, () => {
-  console.log(`Server listening at http://localhost:${PORT}`);
+app
+  .listen(PORT, () => {
+    console.log(`Server listening at http://localhost:${PORT}`);
+  })
+  .on("error", (err) => {
+    console.error("💥 Failed to bind server:", err);
+  });
+
+// Catch uncaught errors so Railway logs them
+process.on("uncaughtException", (err) => {
+  console.error("💥 Uncaught Exception:", err);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("💥 Unhandled Promise Rejection:", reason);
 });
