@@ -13,59 +13,84 @@ app.use(express.json()); // ✅ Then use JSON middleware
 const PORT = process.env.PORT || 3100;
 
 // --- AI parser using Ollama + deepseek-r1:7b ---
-async function callOllamaDeepseek(prompt) {
-  const res = await fetch("http://localhost:11434/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "deepseek-r1:7b",
-      format: "json",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You extract structured gig details and respond with raw JSON using keys: date, venue, city, time.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    }),
+// async function callOllamaDeepseek(prompt) {
+//   const res = await fetch("http://localhost:11434/api/chat", {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify({
+//       model: "deepseek-r1:7b",
+//       format: "json",
+//       messages: [
+//         {
+//           role: "system",
+//           content:
+//             "You extract structured gig details and respond with raw JSON using keys: date, venue, city, time.",
+//         },
+//         {
+//           role: "user",
+//           content: prompt,
+//         },
+//       ],
+//     }),
+//   });
+
+const { OpenAI } = require("openai");
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+async function callOpenAI(prompt) {
+  const systemPrompt = `You are a JSON API that extracts gig info from plain text. Respond with a single JSON object using keys: date, venue, city, time. No explanations or formatting. Example:
+{"date":"2025-07-05","venue":"The Mint","city":"Los Angeles","time":"9:00 PM"}`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    temperature: 0.2,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: prompt },
+    ],
   });
 
-  const raw = await res.text();
-  console.log("🔍 FULL RAW OLLAMA RESPONSE:\n", raw);
-
-  const lines = raw.trim().split("\n").filter(Boolean);
-
-  let combined = "";
-
-  for (const line of lines) {
-    try {
-      const parsed = JSON.parse(line);
-      if (parsed.message && parsed.message.content) {
-        combined += parsed.message.content;
-      }
-    } catch (err) {
-      // skip malformed lines
-    }
-  }
-
-  const jsonStr = combined.trim();
-  console.log("✅ Final combined response:\n", jsonStr);
-
-  if (!jsonStr || !jsonStr.startsWith("{")) {
-    throw new Error("AI returned invalid JSON.");
-  }
+  const content = response.choices[0].message.content;
+  console.log("🧠 OpenAI response:\n", content);
 
   try {
-    const cleaned = jsonStr.replace(/,\s*}/g, "}");
-    return JSON.parse(cleaned);
+    return JSON.parse(content);
   } catch (err) {
-    console.error("❌ Failed to parse:\n", jsonStr);
-    throw err;
+    throw new Error("Failed to parse OpenAI response: " + content);
   }
+}
+
+const raw = await res.text();
+console.log("🔍 FULL RAW OLLAMA RESPONSE:\n", raw);
+
+const lines = raw.trim().split("\n").filter(Boolean);
+
+let combined = "";
+
+for (const line of lines) {
+  try {
+    const parsed = JSON.parse(line);
+    if (parsed.message && parsed.message.content) {
+      combined += parsed.message.content;
+    }
+  } catch (err) {
+    // skip malformed lines
+  }
+}
+
+const jsonStr = combined.trim();
+console.log("✅ Final combined response:\n", jsonStr);
+
+if (!jsonStr || !jsonStr.startsWith("{")) {
+  throw new Error("AI returned invalid JSON.");
+}
+
+try {
+  const cleaned = jsonStr.replace(/,\s*}/g, "}");
+  return JSON.parse(cleaned);
+} catch (err) {
+  console.error("❌ Failed to parse:\n", jsonStr);
+  throw err;
 }
 
 app.use((req, res, next) => {
@@ -79,7 +104,7 @@ app.post("/api/parse-and-add", async (req, res) => {
   if (!message) return res.status(400).json({ error: "No message provided." });
 
   try {
-    const parsedGig = await callOllamaDeepseek(message);
+    const parsedGig = await callOpenAI(message);
 
     if (!parsedGig || !parsedGig.date) {
       return res
