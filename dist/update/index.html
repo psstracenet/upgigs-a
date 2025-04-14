@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Update Gig</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Update Gig via AI</h1>
+      <form id="gig-form">
+        <label for="gig-message">Describe the new gig:</label><br />
+        <textarea
+          id="gig-message"
+          rows="4"
+          placeholder="e.g., Add May 20 at The Echo in LA at 8pm."
+        ></textarea
+        ><br />
+        <button type="submit">Send to AI</button>
+      </form>
+      <div id="result"></div>
+    </main>
+
+    <script type="module">
+      const form = document.getElementById("gig-form");
+      const resultBox = document.getElementById("result");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const message = document.getElementById("gig-message").value.trim();
+        resultBox.textContent = "Sending to AI...";
+
+        const res = await fetch("http://localhost:3100/api/parse-and-add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          resultBox.textContent = `✅ Gig added: ${data.gig.venue}, ${data.gig.date} @ ${data.gig.time}`;
+        } else {
+          resultBox.textContent = `❌ Error: ${
+            data.error || "Failed to update"
+          }`;
+        }
+      });
+    </script>
+  </body>
+</html>

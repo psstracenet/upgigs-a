@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Metro Jethros – Upcoming Gigs</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Upcoming Shows</h1>
+      <section id="gig-list">
+        {% if gigs.length > 0 %} {% for gig in gigs %}
+        <div class="gig-card">
+          <strong>{{ gig.date | date("MMMM D, YYYY") }}</strong
+          ><br />
+          <span>{{ gig.venue }}</span
+          ><br />
+          <em>{{ gig.city }}</em
+          ><br />
+          <span class="time">{{ gig.time }}</span>
+        </div>
+        {% endfor %} {% else %}
+        <p>No gigs scheduled.</p>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

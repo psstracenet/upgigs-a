@@ -1,0 +1,44 @@
+[
+  {
+    "date": "2025-04-25",
+    "venue": "The Basement",
+    "city": "Nashville, TN",
+    "time": "8:00 PM"
+  },
+  {
+    "date": "2025-05-02",
+    "venue": "The Fillmore",
+    "city": "San Francisco, CA",
+    "time": "9:30 PM"
+  },
+  {
+    "date": "2025-06-15",
+    "venue": "The Cat's Cradle",
+    "city": "Carrboro, NC",
+    "time": "8:30 PM"
+  },
+  {
+    "date": "2025-05-12",
+    "venue": "The Cobra Club",
+    "city": "Brooklyn, NY",
+    "time": "8:00 PM"
+  },
+  {
+    "date": "2023-06-10",
+    "venue": "The Troubadour",
+    "city": "Los Angeles",
+    "time": "9:00 PM"
+  },
+  {
+    "date": "May 20",
+    "venue": "Tracei",
+    "city": "LA",
+    "time": "8pm"
+  },
+  {
+    "date": "2023-05-31",
+    "venue": "Mantzys",
+    "city": "Hickory",
+    "time": "8:00 PM"
+  }
+]
