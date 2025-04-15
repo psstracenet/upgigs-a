@@ -68,7 +68,6 @@ app.post("/api/parse-and-add", async (req, res) => {
         },
         { role: "user", content: message },
       ],
-      timeout: 20000,
     });
 
     let parsed;
