@@ -54,6 +54,8 @@ app.post("/api/parse-and-add", async (req, res) => {
     return res.status(403).json({ error: "Forbidden: Invalid token" });
   }
 
+  const today = new Date().toISOString().split("T")[0]; // e.g., "2025-04-15"
+
   const message = req.body.message;
   if (!message) return res.status(400).json({ error: "Missing message" });
 
@@ -64,27 +66,28 @@ app.post("/api/parse-and-add", async (req, res) => {
         {
           role: "system",
           content: `
-  You are an expert gig parser. Extract the following keys from the user's message and return only valid JSON:
-  - date: format YYYY-MM-DD
-  - venue: string
-  - city: string
-  - time: string (like "8:00 PM")
-
-  Rules:
-  - If no year is given, use the next logical future date (never output past dates).
-  - If the parsed date falls in the past, correct it to the next valid occurrence.
-  - Always extract exactly one date.
-  - If time is missing, set it to "TBD".
-  - Do not include any extra fields or explanations.
-
-  Example:
-  {
-    "date": "2025-02-25",
-    "venue": "Lincoln's Bedroom",
-    "city": "Charlotte",
-    "time": "9:00 PM"
-  }
-`.trim(),
+            Today's date is ${today}.
+            
+            You are an expert gig parser. Extract the following keys and return only valid JSON:
+            - date: in YYYY-MM-DD format
+            - venue: string
+            - city: string
+            - time: like "8:00 PM"
+      
+            Rules:
+            - If no year is provided, choose the next future occurrence based on today's date.
+            - Never output past dates.
+            - Set time to "TBD" if missing.
+            - Don't include explanation or extra fields.
+      
+            Example:
+            {
+              "date": "2025-05-01",
+              "venue": "The Pour House",
+              "city": "Raleigh",
+              "time": "8:00 PM"
+            }
+          `.trim(),
         },
         {
           role: "user",
