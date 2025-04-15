@@ -104,7 +104,7 @@ app.post("/api/parse-and-add", async (req, res) => {
     res.json({ gig: parsed });
   } catch (err) {
     console.error("❌ AI parse error:", err);
-    res.status(500).json({ error: "Failed to parse message" });
+    res.status(500).json({ error: "Failed to0 parse message" });
   }
 });
 
