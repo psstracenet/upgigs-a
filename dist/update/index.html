@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -22,31 +23,39 @@
       <div id="result"></div>
     </main>
 
-    <script type="module">
-      const form = document.getElementById("gig-form");
-      const resultBox = document.getElementById("result");
+    <script>
+      document
+        .getElementById("gig-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const message = document.getElementById("gig-message").value;
+          const resultBox = document.getElementById("result");
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const message = document.getElementById("gig-message").value.trim();
-        resultBox.textContent = "Sending to AI...";
+          resultBox.innerText = "⏳ Sending to AI...";
 
-        const res = await fetch("http://localhost:3100/api/parse-and-add", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message }),
+          try {
+            const res = await fetch("/api/parse-and-add", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer gigs2025tokenX107",
+              },
+              body: JSON.stringify({ message }),
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+              resultBox.innerText = `✅ Gig added: ${JSON.stringify(data.gig)}`;
+            } else {
+              resultBox.innerText = `❌ Error: ${
+                data.error || "Unknown error"
+              }`;
+            }
+          } catch (err) {
+            resultBox.innerText = `❌ Network error: ${err.message}`;
+          }
         });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          resultBox.textContent = `✅ Gig added: ${data.gig.venue}, ${data.gig.date} @ ${data.gig.time}`;
-        } else {
-          resultBox.textContent = `❌ Error: ${
-            data.error || "Failed to update"
-          }`;
-        }
-      });
     </script>
   </body>
 </html>

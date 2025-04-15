@@ -40,5 +40,17 @@
     "venue": "Mantzys",
     "city": "Hickory",
     "time": "8:00 PM"
+  },
+  {
+    "date": "2025-05-03",
+    "venue": "The Pour House",
+    "city": "Raleigh",
+    "time": "8:00 PM"
+  },
+  {
+    "date": "2025-05-20",
+    "venue": "The Money",
+    "city": "LA",
+    "time": "8:00pm"
   }
 ]

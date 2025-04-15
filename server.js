@@ -7,12 +7,17 @@ const { OpenAI } = require("openai");
 console.log("👀 server.js starting...");
 
 const app = express();
-const PORT = process.env.PORT || 3100;
+const PORT = process.env.PORT || 8080;
 const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenX107";
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "dist")));
+
+if (!process.env.OPENAI_API_KEY) {
+  console.error("❌ OPENAI_API_KEY is not set!");
+  process.exit(1);
+}
 
 console.log("🔧 Middleware and static serving initialized.");
 
