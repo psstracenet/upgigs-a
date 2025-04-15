@@ -67,8 +67,9 @@ app.post("/api/parse-and-add", async (req, res) => {
         {
           role: "system",
           content:
-            "Extract gig info from a sentence. Return JSON with keys: date, venue, city, time.",
+            "You are a gig date extractor. Return valid JSON with the keys: date (YYYY-MM-DD), venue, city, and time (like 8:00 PM). Always use full dates including the year.",
         },
+
         {
           role: "user",
           content: message,
