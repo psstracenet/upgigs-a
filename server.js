@@ -54,7 +54,7 @@ app.post("/api/parse-and-add", async (req, res) => {
     return res.status(403).json({ error: "Forbidden: Invalid token" });
   }
 
-  const today = new Date().toISOString().split("T")[0]; // e.g., "2025-04-15"
+  const today = new Date().toISOString().split("T")[0];
 
   const message = req.body.message;
   if (!message) return res.status(400).json({ error: "Missing message" });
@@ -62,32 +62,40 @@ app.post("/api/parse-and-add", async (req, res) => {
   try {
     const aiResponse = await openai.chat.completions.create({
       model: "gpt-4",
+      temperature: 0.2,
       messages: [
         {
           role: "system",
           content: `
-            Today's date is ${today}.
-            
-            You are an expert gig parser. Extract the following keys and return only valid JSON:
-            - date: in YYYY-MM-DD format
-            - venue: string
-            - city: string
-            - time: like "8:00 PM"
-      
-            Rules:
-            - If no year is provided, choose the next future occurrence based on today's date.
-            - Never output past dates.
-            - Set time to "TBD" if missing.
-            - Don't include explanation or extra fields.
-      
-            Example:
-            {
-              "date": "2025-05-01",
-              "venue": "The Pour House",
-              "city": "Raleigh",
-              "time": "8:00 PM"
-            }
-          `.trim(),
+Today's date is ${today}. 
+
+You are a strict, no-nonsense event parser. Extract structured JSON from a casual message. Use ONLY the information provided in the message. Do not guess, do not invent details.
+
+Output must be valid JSON with these keys:
+- "date": in YYYY-MM-DD format
+- "venue": string
+- "city": string
+- "time": like "8:00 PM" or "TBD" if not found
+
+Rules:
+- If no year is provided, assume the next future date for that month/day.
+- Never output past dates.
+- NEVER make up venue names or cities. Only use what’s explicitly mentioned.
+- If anything is missing, leave it blank or use "TBD".
+
+Example input: 
+"New gig on March 1 2025 in Rosemont at Purples at 9pm"
+
+Expected output:
+{
+  "date": "2025-03-01",
+  "venue": "Purples",
+  "city": "Rosemont",
+  "time": "9:00 PM"
+}
+
+Respond ONLY with valid JSON. No commentary.
+`.trim(),
         },
         {
           role: "user",
@@ -141,8 +149,6 @@ function checkMail() {
     tls: true,
     tlsOptions: { rejectUnauthorized: false },
   });
-
-  // Temporary to list folders
 
   imap.getBoxes((err, boxes) => {
     if (err) {
