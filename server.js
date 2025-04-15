@@ -5,6 +5,7 @@ const OpenAI = require("openai");
 const bodyParser = require("body-parser");
 const Imap = require("imap");
 const { simpleParser } = require("mailparser");
+require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -19,6 +20,16 @@ if (!OPENAI_API_KEY || !EMAIL_USER || !EMAIL_PASS) {
   console.error("❌ Missing required environment variables.");
   process.exit(1);
 }
+// Postgres DB
+const { Pool } = require("pg");
+
+const db = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
+});
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
@@ -26,11 +37,19 @@ const gigsPath = path.join(__dirname, "_data", "gigs.json");
 let gigsCache = [];
 let isFileWritable = true;
 
+// ✅ Create the file if it doesn't exist
+if (!fs.existsSync(gigsPath)) {
+  console.warn("📁 gigs.json not found — creating it with empty array.");
+  fs.mkdirSync(path.dirname(gigsPath), { recursive: true });
+  fs.writeFileSync(gigsPath, "[]", "utf-8");
+}
+
 try {
   const content = fs.readFileSync(gigsPath, "utf-8");
   gigsCache = JSON.parse(content);
-} catch {
-  console.warn("📁 No gigs.json found. Starting empty.");
+  console.log("✅ gigs.json loaded with", gigsCache.length, "events");
+} catch (err) {
+  console.error("❌ Failed to load gigs.json:", err.message);
   gigsCache = [];
 }
 
@@ -44,8 +63,17 @@ try {
 app.use(bodyParser.json());
 app.use(express.static("dist"));
 
-app.get("/gigs.json", (req, res) => {
-  res.json(gigsCache);
+console.log("✅ /gigs.json route is registered");
+app.get("/gigs.json", async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT date, venue, city, time FROM gigs ORDER BY date ASC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Failed to fetch gigs from DB:", err.message);
+    res.status(500).json({ error: "Failed to load gigs" });
+  }
 });
 
 app.post("/api/parse-and-add", async (req, res) => {
@@ -135,9 +163,17 @@ app.post("/api/parse-and-add", async (req, res) => {
     parsed.date = finalDate;
 
     // Save to memory + disk
-    gigsCache.push(parsed);
-    if (isFileWritable) {
-      fs.writeFileSync(gigsPath, JSON.stringify(gigsCache, null, 2));
+    // Save to Postgres instead
+    try {
+      await db.query(
+        `INSERT INTO gigs (date, venue, city, time)
+       VALUES ($1, $2, $3, $4)`,
+        [finalDate, parsed.venue, parsed.city, parsed.time]
+      );
+      console.log("✅ Gig saved to PostgreSQL");
+    } catch (err) {
+      console.error("❌ Failed to insert gig:", err.message);
+      return res.status(500).json({ error: "DB insert failed" });
     }
 
     res.json({ gig: parsed });
@@ -262,8 +298,10 @@ function checkMail() {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
-  setInterval(checkMail, 2 * 60 * 1000);
-  checkMail();
+  if (process.env.ENABLE_IMAP === "true") {
+    setInterval(checkMail, 2 * 60 * 1000);
+    checkMail();
+  }
 });
 
 process.on("uncaughtException", (err) => {

@@ -2,11 +2,11 @@
   "name": "upgigs",
   "version": "1.0.0",
   "main": ".eleventy.js",
- "scripts": {
-  "build": "eleventy --input=src --output=dist",
-  "start": "npm run build && node server.js",
-  "local": "eleventy --serve"
-},
+  "scripts": {
+    "build": "eleventy --input=src --output=dist",
+    "start": "npm run build && node server.js",
+    "local": "eleventy --serve"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -16,15 +16,17 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "imap-simple": "^5.1.0",
     "luxon": "^3.6.1",
     "mailparser": "^3.7.2",
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
-    "openai": "^4.94.0"
+    "openai": "^4.94.0",
+    "pg": "^8.14.1"
   },
   "engines": {
-  "node": ">=18"
-}
+    "node": ">=18"
+  }
 }

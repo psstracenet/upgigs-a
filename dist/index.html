@@ -5,60 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>The Metro Jethros – Upcoming Gigs</title>
     <link rel="stylesheet" href="/css/style.css" />
-    <style>
+    <!-- <style>
       :root {
-        --bg: #121212;
-        --fg: #e0e0e0;
-        --card-bg: #1e1e1e;
-        --accent: #8b5cf6;
-        --highlight: #2d89ef;
+        --color-bg: #1e1b2e;
+        --color-surface: #2a243a;
+        --color-primary: #ff4e00;
+        --color-secondary: #e7e247;
+        --color-accent: #39b54a;
+        --color-muted: #ccc;
+        --color-border: #2d89ef;
+        --color-text: #fefefe;
+        --color-card-bg: #2f2b3d;
+        --color-shadow: #333;
+        --color-hover-glow: hsl(220, 80%, 55%);
       }
 
       body {
-        background: var(--bg);
-        color: var(--fg);
         font-family: system-ui, sans-serif;
-        margin: 0;
-        padding: 0;
-      }
-
-      main {
-        max-width: 800px;
-        margin: 0 auto;
         padding: 2rem;
+        background: var(--color-bg);
+        color: var(--color-text);
       }
 
       h1 {
+        text-align: center;
         font-size: 2rem;
         margin-bottom: 1.5rem;
-        color: var(--fg);
       }
 
-      h2 {
-        margin-top: 2rem;
-        color: var(--accent);
-        border-bottom: 1px solid var(--card-bg);
-        padding-bottom: 0.3rem;
+      #gig-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
       }
 
       .gig-card {
-        background: var(--card-bg);
+        background: var(--color-card-bg);
         padding: 1rem;
-        border-radius: 0.75rem;
         margin: 1rem 0;
-        border-left: 4px solid var(--highlight);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-        transition: transform 0.2s ease;
+        border-radius: 10px;
+        box-shadow: 0 0 8px var(--color-shadow);
+        transition: transform 0.2s, box-shadow 0.2s;
+        border-left: 4px solid var(--color-border);
+        color: var(--color-text);
       }
 
       .gig-card:hover {
-        transform: scale(1.01);
+        transform: scale(1.02);
+        box-shadow: 0 0 12px var(--color-hover-glow);
       }
 
-      .gig-card.fade-in {
-        opacity: 0;
-        transform: translateY(10px);
-        animation: fadeInUp 0.5s ease forwards;
+      .time {
+        font-size: 0.9rem;
+        color: var(--color-muted);
       }
 
       @keyframes fadeInUp {
@@ -67,19 +66,7 @@
           transform: translateY(0);
         }
       }
-
-      .new-badge {
-        display: inline-block;
-        background: crimson;
-        color: white;
-        padding: 2px 6px;
-        margin-left: 10px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: bold;
-        vertical-align: middle;
-      }
-    </style>
+    </style> -->
   </head>
   <body>
     <main>
