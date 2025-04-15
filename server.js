@@ -72,7 +72,7 @@ app.post("/api/parse-and-add", async (req, res) => {
         {
           role: "system",
           content:
-            "Extract gig info from a sentence. Return valid JSON with keys: date (YYYY-MM-DD), venue, city, and time (e.g., 8:00 PM).",
+            "You are a strict date parser. Extract gig info and return ONLY valid JSON. The 'date' field MUST be in ISO format: YYYY-MM-DD. Do not include month names or slashes. Example: '2025-04-25'. Keys: date, venue, city, time (like '8:00 PM').",
         },
         { role: "user", content: message },
       ],
@@ -88,6 +88,11 @@ app.post("/api/parse-and-add", async (req, res) => {
         aiResponse.choices[0].message.content
       );
       return res.status(500).json({ error: "Invalid JSON from AI" });
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
+      console.warn("⛔ Invalid date format:", parsed.date);
+      return res.status(400).json({ error: "Invalid date format" });
     }
 
     gigsCache.push(parsed);
