@@ -71,8 +71,11 @@ app.get("/gigs.json", async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
-    console.error("❌ Failed to fetch gigs from DB:", err.message);
-    res.status(500).json({ error: "Failed to load gigs" });
+    console.error("❌ Failed to fetch gigs from DB:", {
+      message: err.message,
+      stack: err.stack,
+      code: err.code,
+    });
   }
 });
 
