@@ -137,6 +137,7 @@ function checkMail() {
       }
 
       imap.search(["UNSEEN", ["SUBJECT", "gig"]], function (err, results) {
+        console.log("📨 Search results:", results);
         if (err || !results.length) {
           console.log("📭 No new messages.");
           imap.end();
@@ -309,4 +310,12 @@ app.listen(PORT, () => {
 
   // Optional: Run immediately on startup
   checkMail();
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("🧨 Uncaught Exception:", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("🧨 Unhandled Rejection:", err);
 });
