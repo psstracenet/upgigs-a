@@ -1,14 +1,32 @@
 const express = require("express");
 const fs = require("fs");
-const gigsPath = path.join(__dirname, "_data", "gigs.json");
 const path = require("path");
-const cors = require("cors");
-const { OpenAI } = require("openai");
+const OpenAI = require("openai");
+const bodyParser = require("body-parser");
 
-let isFileWritable = true;
+const app = express();
+const PORT = process.env.PORT || 8080;
+
+// Env setup
+const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenX107";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+if (!OPENAI_API_KEY) {
+  console.error("❌ OPENAI_API_KEY not set!");
+  process.exit(1);
+}
+const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+// Middleware
+app.use(bodyParser.json());
+app.use(express.static("dist"));
+
+// Gig file and memory fallback
+const gigsPath = path.join(__dirname, "_data", "gigs.json");
+
 let gigsCache = [];
+let isFileWritable = true;
 
-// Attempt to read gigs.json
+// Load gigs from file or start fresh
 try {
   const content = fs.readFileSync(gigsPath, "utf-8");
   gigsCache = JSON.parse(content);
@@ -17,188 +35,66 @@ try {
   gigsCache = [];
 }
 
-// Check if the file is writable (for local only)
+// Check write access
 try {
   fs.accessSync(gigsPath, fs.constants.W_OK);
 } catch {
-  console.warn(
-    "⚠️ gigs.json is not writable — using in-memory fallback (likely Railway)"
-  );
+  console.warn("⚠️ gigs.json not writable — running in memory mode");
   isFileWritable = false;
 }
 
-const path = require("path");
-const cors = require("cors");
-const { OpenAI } = require("openai");
-
-console.log("👀 server.js starting...");
-
-const app = express();
-const PORT = process.env.PORT || 8080;
-const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenX107";
-
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "dist")));
-
+// Serve gigs dynamically
 app.get("/gigs.json", (req, res) => {
   res.json(gigsCache);
 });
 
-if (!process.env.OPENAI_API_KEY) {
-  console.error("❌ OPENAI_API_KEY is not set!");
-  process.exit(1);
-}
-
-console.log("🔧 Middleware and static serving initialized.");
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// Health check
-app.get("/", (req, res) => {
-  res.send("🎸 UpGigs API is alive!");
-});
-
-console.log("🔧 Registering /api/parse-and-add route...");
-
+// POST: parse and add gig via AI
 app.post("/api/parse-and-add", async (req, res) => {
-  console.log("📩 Received parse-and-add request:", req.body);
-
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.replace("Bearer ", "");
-
-  if (token !== SECRET_TOKEN) {
-    console.warn("🚫 Invalid token received");
+  const auth = req.headers.authorization;
+  if (!auth || auth !== `Bearer ${SECRET_TOKEN}`) {
     return res.status(403).json({ error: "Forbidden: Invalid token" });
   }
 
-  const { message } = req.body;
+  const message = req.body.message;
   if (!message) {
-    return res.status(400).json({ error: "No message provided." });
+    return res.status(400).json({ error: "Missing message" });
   }
 
   try {
-    console.log("🧠 Calling OpenAI with prompt:", message);
-    const parsedGig = await callOpenAI(message);
+    const aiResponse = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Extract gig info from a sentence. Return JSON with keys: date, venue, city, time.",
+        },
+        {
+          role: "user",
+          content: message,
+        },
+      ],
+    });
 
-    if (!parsedGig || parsedGig.error) {
-      console.error("⚠️ OpenAI returned invalid response.");
-      return res
-        .status(422)
-        .json({ error: "OpenAI returned invalid or unparseable JSON." });
+    const parsed = JSON.parse(aiResponse.choices[0].message.content.trim());
+    gigsCache.push(parsed);
+
+    if (isFileWritable) {
+      try {
+        fs.writeFileSync(gigsPath, JSON.stringify(gigsCache, null, 2));
+      } catch (err) {
+        console.warn("❌ Failed to write gigs.json:", err.message);
+      }
     }
 
-    const gigsPath = path.join(__dirname, "_data", "gigs.json");
-
-    fs.readFile(gigsPath, "utf8", (err, data) => {
-      if (err) {
-        console.error("❌ Failed to read gigs.json:", err);
-        return res.status(500).json({ error: "Failed to read gigs.json" });
-      }
-
-      const gigs = JSON.parse(data);
-      gigs.push(parsedGig);
-
-      console.log("💾 Writing updated gigs.json...");
-      fs.writeFile(gigsPath, JSON.stringify(gigs, null, 2), (err) => {
-        if (err) {
-          console.error("❌ Failed to write gigs.json:", err);
-          return res.status(500).json({ error: "Failed to write gigs.json" });
-        }
-
-        console.log("✅ Gig saved:", parsedGig);
-        res.json({ success: true, gig: parsedGig });
-
-        gigsCache.push(parsed);
-
-        // Only write to disk if local
-        if (isFileWritable) {
-          try {
-            fs.writeFileSync(gigsPath, JSON.stringify(gigsCache, null, 2));
-          } catch (err) {
-            console.warn("❌ Failed to write gigs.json:", err.message);
-          }
-        }
-      });
-    });
-  } catch (error) {
-    console.error("🔥 Error in /api/parse-and-add:", error);
-    res.status(500).json({ error: "Failed to parse message using OpenAI." });
-  }
-});
-
-app.post("/api/add-gig", (req, res) => {
-  const newGig = req.body;
-  const gigsPath = path.join(__dirname, "_data", "gigs.json");
-
-  fs.readFile(gigsPath, "utf8", (err, data) => {
-    if (err) return res.status(500).json({ error: "Failed to read gigs.json" });
-
-    const gigs = JSON.parse(data);
-    gigs.push(newGig);
-
-    fs.writeFile(gigsPath, JSON.stringify(gigs, null, 2), (err) => {
-      if (err)
-        return res.status(500).json({ error: "Failed to write gigs.json" });
-      res.json({ success: true, gigs });
-    });
-  });
-});
-
-async function callOpenAI(prompt) {
-  const systemPrompt = `
-You are a strict JSON generator. Only respond with this format:
-{"date":"2025-10-02","venue":"The Bluebird","city":"Nashville","time":"8:30 PM"}
-Return valid one-line JSON. No other text. If unparseable, return: {"error":"unparseable"}
-`;
-
-  const response = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    temperature: 0.2,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: prompt },
-    ],
-  });
-
-  const rawContent = response.choices[0].message.content;
-
-  console.log(
-    "🔎 Raw OpenAI full response:\n",
-    JSON.stringify(response, null, 2)
-  );
-  console.log("🧠 OpenAI responded:");
-  console.log("-----");
-  console.log(rawContent);
-  console.log("-----");
-
-  if (!rawContent || rawContent.trim() === "") {
-    console.error("⚠️ OpenAI returned an empty response.");
-    return null;
-  }
-
-  try {
-    return JSON.parse(rawContent);
+    res.json({ gig: parsed });
   } catch (err) {
-    console.error("❌ Failed to parse OpenAI response:\n", rawContent);
-    return null;
+    console.error("❌ AI parsing failed:", err);
+    res.status(500).json({ error: "Failed to parse message" });
   }
-}
-
-app
-  .listen(PORT, () => {
-    console.log(`Server listening at http://localhost:${PORT}`);
-  })
-  .on("error", (err) => {
-    console.error("💥 Failed to bind server:", err);
-  });
-
-// 🔐 Catch unexpected runtime crashes
-process.on("uncaughtException", (err) => {
-  console.error("💥 Uncaught Exception:", err);
 });
-process.on("unhandledRejection", (reason) => {
-  console.error("💥 Unhandled Promise Rejection:", reason);
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
