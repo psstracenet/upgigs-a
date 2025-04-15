@@ -125,7 +125,7 @@ function checkMail() {
   });
 
   function openInbox(cb) {
-    imap.openBox("INBOX", false, cb);
+    imap.openBox("NearlyForgot", false, cb);
   }
 
   imap.once("ready", function () {
