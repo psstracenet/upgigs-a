@@ -63,10 +63,32 @@ app.post("/api/parse-and-add", async (req, res) => {
       messages: [
         {
           role: "system",
-          content:
-            "You are a strict date parser. Extract gig info and return ONLY valid JSON. The 'date' field MUST be in ISO format: YYYY-MM-DD. Do not include month names or slashes. Example: '2025-04-25'. Keys: date, venue, city, time (like '8:00 PM').",
+          content: `
+            You are an expert gig parser. Read the user's message and extract only valid JSON with these keys:
+            - date (in YYYY-MM-DD format)
+            - venue (string)
+            - city (string)
+            - time (like "8:00 PM")
+      
+            Rules:
+            - If no year is given, assume the next valid future date.
+            - If time is missing, set it to "TBD".
+            - Always pick the next logical gig date (never output past dates).
+            - Don't include any explanation, just raw JSON.
+      
+            Example:
+            {
+              "date": "2025-05-01",
+              "venue": "The Pour House",
+              "city": "Raleigh",
+              "time": "8:00 PM"
+            }
+          `.trim(),
         },
-        { role: "user", content: message },
+        {
+          role: "user",
+          content: message,
+        },
       ],
     });
 
