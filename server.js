@@ -106,6 +106,7 @@ app.post("/api/parse-and-add", async (req, res) => {
 // Email polling function
 
 // Run this every 10 min to pull new gig emails
+// Run this every 10 min to pull new gig emails
 function checkMail() {
   console.log("📬 Checking for new gigs via email...");
 
