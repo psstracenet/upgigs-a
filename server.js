@@ -218,7 +218,7 @@ function checkMail() {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
-  setInterval(checkMail, 10 * 60 * 1000);
+  setInterval(checkMail, 2 * 60 * 1000);
   checkMail();
 });
 
