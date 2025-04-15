@@ -34,3 +34,11 @@ h1 {
   font-size: 0.9rem;
   color: #ccc;
 }
+
+.gig-card {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-left: 4px solid #2d89ef;
+  background: #f9f9f9;
+  border-radius: 6px;
+}

@@ -5,25 +5,155 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>The Metro Jethros – Upcoming Gigs</title>
     <link rel="stylesheet" href="/css/style.css" />
+    <style>
+      :root {
+        --bg: #121212;
+        --fg: #e0e0e0;
+        --card-bg: #1e1e1e;
+        --accent: #8b5cf6;
+        --highlight: #2d89ef;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+
+      main {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      h1 {
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+        color: var(--fg);
+      }
+
+      h2 {
+        margin-top: 2rem;
+        color: var(--accent);
+        border-bottom: 1px solid var(--card-bg);
+        padding-bottom: 0.3rem;
+      }
+
+      .gig-card {
+        background: var(--card-bg);
+        padding: 1rem;
+        border-radius: 0.75rem;
+        margin: 1rem 0;
+        border-left: 4px solid var(--highlight);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        transition: transform 0.2s ease;
+      }
+
+      .gig-card:hover {
+        transform: scale(1.01);
+      }
+
+      .gig-card.fade-in {
+        opacity: 0;
+        transform: translateY(10px);
+        animation: fadeInUp 0.5s ease forwards;
+      }
+
+      @keyframes fadeInUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .new-badge {
+        display: inline-block;
+        background: crimson;
+        color: white;
+        padding: 2px 6px;
+        margin-left: 10px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        vertical-align: middle;
+      }
+    </style>
   </head>
   <body>
     <main>
       <h1>Upcoming Shows</h1>
+
       <section id="gig-list">
-        {% if gigs.length > 0 %} {% for gig in gigs %}
-        <div class="gig-card">
-          <strong>{{ gig.date | date("MMMM D, YYYY") }}</strong
-          ><br />
-          <span>{{ gig.venue }}</span
-          ><br />
-          <em>{{ gig.city }}</em
-          ><br />
-          <span class="time">{{ gig.time }}</span>
-        </div>
-        {% endfor %} {% else %}
-        <p>No gigs scheduled.</p>
-        {% endif %}
+        <p>Loading gigs...</p>
       </section>
+
+      <script>
+        async function loadGigs() {
+          const container = document.getElementById("gig-list");
+          container.innerHTML = "<p>Loading gigs...</p>";
+
+          try {
+            const res = await fetch("/gigs.json");
+            const gigs = await res.json();
+
+            if (!gigs.length) {
+              container.innerHTML = "<p>No gigs found.</p>";
+              return;
+            }
+
+            gigs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            container.innerHTML = "";
+
+            const grouped = {};
+            gigs.forEach((gig) => {
+              const date = new Date(gig.date);
+              const month = date.toLocaleDateString(undefined, {
+                month: "long",
+                year: "numeric",
+              });
+              if (!grouped[month]) grouped[month] = [];
+              grouped[month].push(gig);
+            });
+
+            const now = new Date();
+
+            for (const month in grouped) {
+              const monthHeader = document.createElement("h2");
+              monthHeader.textContent = month;
+              container.appendChild(monthHeader);
+
+              grouped[month].forEach((gig) => {
+                const div = document.createElement("div");
+                div.classList.add("gig-card", "fade-in");
+
+                const date = new Date(gig.date);
+                const isNew = now - date < 24 * 60 * 60 * 1000;
+
+                div.innerHTML = `
+                  <strong>${date.toLocaleDateString(undefined, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}</strong><br>
+                  <span>${gig.venue}</span><br>
+                  <em>${gig.city}</em><br>
+                  <span class="time">${gig.time}</span>
+                  ${isNew ? '<span class="new-badge">NEW</span>' : ""}
+                `;
+
+                container.appendChild(div);
+              });
+            }
+          } catch (err) {
+            container.innerHTML = `<p>❌ Failed to load gigs: ${err.message}</p>`;
+          }
+        }
+
+        loadGigs();
+      </script>
     </main>
   </body>
 </html>
