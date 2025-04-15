@@ -8,7 +8,7 @@ console.log("👀 server.js starting...");
 
 const app = express();
 const PORT = process.env.PORT || 3100;
-const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenXYZ";
+const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenX107";
 
 app.use(cors());
 app.use(express.json());
