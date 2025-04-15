@@ -65,8 +65,9 @@ app.post("/api/parse-and-add", async (req, res) => {
   if (monthDayMatch) {
     const [_, monthStr, dayStr] = monthDayMatch;
     const parsedDay = parseInt(dayStr);
+    const monthIndex = new Date(`${monthStr} 1`).getMonth(); // 0-based
     const dateThisYear = new Date(
-      `${monthStr} ${parsedDay}, ${today.getFullYear()}`
+      Date.UTC(today.getFullYear(), monthIndex, parsedDay)
     );
 
     if (!isNaN(dateThisYear.getTime())) {
