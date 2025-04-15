@@ -1,6 +1,9 @@
 const express = require("express");
 const fs = require("fs");
 const gigsPath = path.join(__dirname, "_data", "gigs.json");
+const path = require("path");
+const cors = require("cors");
+const { OpenAI } = require("openai");
 
 let isFileWritable = true;
 let gigsCache = [];
