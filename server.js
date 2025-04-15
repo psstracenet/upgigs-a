@@ -78,7 +78,18 @@ app.post("/api/parse-and-add", async (req, res) => {
       ],
     });
 
-    const parsed = JSON.parse(aiResponse.choices[0].message.content.trim());
+    let parsed;
+
+    try {
+      parsed = JSON.parse(aiResponse.choices[0].message.content.trim());
+    } catch (err) {
+      console.warn(
+        "❌ Invalid JSON returned by AI:",
+        aiResponse.choices[0].message.content
+      );
+      return res.status(500).json({ error: "Invalid JSON from AI" });
+    }
+
     gigsCache.push(parsed);
 
     if (isFileWritable) {
@@ -119,7 +130,7 @@ function checkMail() {
         return;
       }
 
-      imap.search(["UNSEEN"], function (err, results) {
+      imap.search(["UNSEEN", ["SUBJECT", "gig"]], function (err, results) {
         if (err || !results.length) {
           console.log("📭 No new messages.");
           imap.end();
