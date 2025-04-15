@@ -117,8 +117,25 @@ function checkMail() {
     tlsOptions: { rejectUnauthorized: false },
   });
 
+  // Temporary to list folders
+
+  imap.getBoxes((err, boxes) => {
+    if (err) {
+      console.error("❌ Could not list folders:", err);
+    } else {
+      console.log("📂 Mailboxes available:", Object.keys(boxes));
+    }
+  });
+
   function openInbox(cb) {
-    imap.openBox("NearlyForgot", false, cb);
+    imap.openBox("NearlyForgot", false, (err, box) => {
+      if (err && err.textCode === "NONEXISTENT") {
+        console.warn("📂 Folder not found. Retrying in 5s...");
+        setTimeout(() => imap.openBox("NearlyForgot", false, cb), 5000);
+      } else {
+        cb(err, box);
+      }
+    });
   }
 
   imap.once("ready", function () {
