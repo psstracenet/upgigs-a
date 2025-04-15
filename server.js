@@ -16,14 +16,23 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
 
+// const db = new Pool({
+//   connectionString: process.env.DATABASE_URL,
+//   ssl:
+//     process.env.NODE_ENV === "production"
+//       ? { rejectUnauthorized: false }
+//       : false,
+// });
+
 if (!OPENAI_API_KEY || !EMAIL_USER || !EMAIL_PASS) {
   console.error("❌ Missing required environment variables.");
   process.exit(1);
 }
 // Postgres DB
-const { Pool } = require("pg");
+const { Pool } = require("pg"); // ✅ Step 1: Import before use
 
 const db = new Pool({
+  // ✅ Step 2: Define once
   connectionString: process.env.DATABASE_URL,
   ssl:
     process.env.NODE_ENV === "production"
