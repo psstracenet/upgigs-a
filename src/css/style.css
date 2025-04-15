@@ -1,8 +1,22 @@
+:root {
+  --color-bg: #1e1b2e;
+  --color-surface: #2a243a;
+  --color-primary: #ff4e00;
+  --color-secondary: #e7e247;
+  --color-accent: #39b54a;
+  --color-muted: #ccc;
+  --color-border: #2d89ef;
+  --color-text: #fefefe;
+  --color-card-bg: #2f2b3d;
+  --color-shadow: #333;
+  --color-hover-glow: hsl(220, 80%, 55%);
+}
+
 body {
   font-family: system-ui, sans-serif;
   padding: 2rem;
-  background: #111;
-  color: #fefefe;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 h1 {
@@ -18,27 +32,22 @@ h1 {
 }
 
 .gig-card {
-  background: #222;
+  background: var(--color-card-bg);
   padding: 1rem;
+  margin: 1rem 0;
   border-radius: 10px;
-  box-shadow: 0 0 8px #333;
-  transition: transform 0.2s;
+  box-shadow: 0 0 8px var(--color-shadow);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-left: 4px solid var(--color-border);
+  color: var(--color-text);
 }
 
 .gig-card:hover {
   transform: scale(1.02);
-  box-shadow: 0 0 12px #00ffd5;
+  box-shadow: 0 0 12px var(--color-hover-glow);
 }
 
 .time {
   font-size: 0.9rem;
-  color: #ccc;
-}
-
-.gig-card {
-  margin: 1rem 0;
-  padding: 1rem;
-  border-left: 4px solid #2d89ef;
-  background: #f9f9f9;
-  border-radius: 6px;
+  color: var(--color-muted);
 }
