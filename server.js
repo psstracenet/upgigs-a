@@ -46,7 +46,7 @@ try {
   isFileWritable = false;
 }
 
-// Serve static files
+// Serve static files.
 app.use(bodyParser.json());
 app.use(express.static("dist"));
 
