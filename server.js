@@ -1,5 +1,29 @@
 const express = require("express");
 const fs = require("fs");
+const gigsPath = path.join(__dirname, "_data", "gigs.json");
+
+let isFileWritable = true;
+let gigsCache = [];
+
+// Attempt to read gigs.json
+try {
+  const content = fs.readFileSync(gigsPath, "utf-8");
+  gigsCache = JSON.parse(content);
+} catch {
+  console.warn("📁 No gigs.json found. Starting with empty list.");
+  gigsCache = [];
+}
+
+// Check if the file is writable (for local only)
+try {
+  fs.accessSync(gigsPath, fs.constants.W_OK);
+} catch {
+  console.warn(
+    "⚠️ gigs.json is not writable — using in-memory fallback (likely Railway)"
+  );
+  isFileWritable = false;
+}
+
 const path = require("path");
 const cors = require("cors");
 const { OpenAI } = require("openai");
@@ -13,6 +37,10 @@ const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenX107";
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "dist")));
+
+app.get("/gigs.json", (req, res) => {
+  res.json(gigsCache);
+});
 
 if (!process.env.OPENAI_API_KEY) {
   console.error("❌ OPENAI_API_KEY is not set!");
@@ -79,6 +107,17 @@ app.post("/api/parse-and-add", async (req, res) => {
 
         console.log("✅ Gig saved:", parsedGig);
         res.json({ success: true, gig: parsedGig });
+
+        gigsCache.push(parsed);
+
+        // Only write to disk if local
+        if (isFileWritable) {
+          try {
+            fs.writeFileSync(gigsPath, JSON.stringify(gigsCache, null, 2));
+          } catch (err) {
+            console.warn("❌ Failed to write gigs.json:", err.message);
+          }
+        }
       });
     });
   } catch (error) {
