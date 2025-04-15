@@ -1,8 +1,8 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const bodyParser = require("body-parser");
 const OpenAI = require("openai");
+const bodyParser = require("body-parser");
 const Imap = require("imap");
 const { simpleParser } = require("mailparser");
 
@@ -15,34 +15,39 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
 
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+if (!OPENAI_API_KEY || !EMAIL_USER || !EMAIL_PASS) {
+  console.error("❌ Missing required environment variables.");
+  process.exit(1);
+}
 
-app.use(bodyParser.json());
-app.use(express.static("dist"));
+const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
 const gigsPath = path.join(__dirname, "_data", "gigs.json");
 let gigsCache = [];
 let isFileWritable = true;
 
 try {
-  const data = fs.readFileSync(gigsPath, "utf-8");
-  gigsCache = JSON.parse(data);
+  const content = fs.readFileSync(gigsPath, "utf-8");
+  gigsCache = JSON.parse(content);
 } catch {
+  console.warn("📁 No gigs.json found. Starting empty.");
   gigsCache = [];
 }
 
 try {
   fs.accessSync(gigsPath, fs.constants.W_OK);
 } catch {
+  console.warn("⚠️ gigs.json not writable — in-memory only");
   isFileWritable = false;
 }
 
-// Serve gigs.json
+app.use(bodyParser.json());
+app.use(express.static("dist"));
+
 app.get("/gigs.json", (req, res) => {
   res.json(gigsCache);
 });
 
-// AI gig parsing endpoint
 app.post("/api/parse-and-add", async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth || auth !== `Bearer ${SECRET_TOKEN}`) {
@@ -100,35 +105,32 @@ app.post("/api/parse-and-add", async (req, res) => {
   }
 });
 
-// Run server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
-  checkMail(); // run once immediately
-  setInterval(checkMail, 10 * 60 * 1000); // every 10 minutes
-});
-
-// Check email inbox for gigs
 function checkMail() {
   console.log("📬 Checking for new gigs via email...");
 
   const imap = new Imap({
     user: EMAIL_USER,
     password: EMAIL_PASS,
-    host: "imap.mail.me.com", // iCloud
+    host: "imap.mail.me.com",
     port: 993,
     tls: true,
     tlsOptions: { rejectUnauthorized: false },
   });
 
+  function openInbox(cb) {
+    imap.openBox("NearlyForgot", false, cb);
+  }
+
   imap.once("ready", function () {
-    imap.openBox("GigUpdates", false, function (err, box) {
+    openInbox(function (err, box) {
       if (err) {
-        console.error("❌ openBox error:", err);
+        console.error("❌ Inbox error:", err);
         imap.end();
         return;
       }
 
       imap.search(["UNSEEN", ["SUBJECT", "gig"]], function (err, results) {
+        console.log("📨 Search results:", results);
         if (err || !results.length) {
           console.log("📭 No new messages.");
           imap.end();
@@ -139,13 +141,13 @@ function checkMail() {
 
         f.on("message", function (msg) {
           msg.on("body", function (stream) {
-            simpleParser(stream, async (err, parsedEmail) => {
+            simpleParser(stream, async (err, parsed) => {
               if (err) {
                 console.error("❌ Email parse error:", err);
                 return;
               }
 
-              const emailText = parsedEmail.text.trim();
+              const emailText = parsed.text.trim();
               console.log("📩 Email body:", emailText);
 
               try {
@@ -162,7 +164,7 @@ function checkMail() {
                 const result = await res.json();
                 console.log("✅ Gig added from email:", result);
               } catch (err) {
-                console.error("❌ Failed to contact gig API:", err.message);
+                console.error("❌ API post failed:", err.message);
               }
             });
           });
@@ -196,3 +198,17 @@ function checkMail() {
 
   imap.connect();
 }
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  setInterval(checkMail, 10 * 60 * 1000);
+  checkMail();
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("🧨 Uncaught Exception:", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("🧨 Unhandled Rejection:", err);
+});
