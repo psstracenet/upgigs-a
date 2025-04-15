@@ -64,26 +64,27 @@ app.post("/api/parse-and-add", async (req, res) => {
         {
           role: "system",
           content: `
-            You are an expert gig parser. Read the user's message and extract only valid JSON with these keys:
-            - date (in YYYY-MM-DD format)
-            - venue (string)
-            - city (string)
-            - time (like "8:00 PM")
-      
-            Rules:
-            - If no year is given, assume the next valid future date.
-            - If time is missing, set it to "TBD".
-            - Always pick the next logical gig date (never output past dates).
-            - Don't include any explanation, just raw JSON.
-      
-            Example:
-            {
-              "date": "2025-05-01",
-              "venue": "The Pour House",
-              "city": "Raleigh",
-              "time": "8:00 PM"
-            }
-          `.trim(),
+  You are an expert gig parser. Extract the following keys from the user's message and return only valid JSON:
+  - date: format YYYY-MM-DD
+  - venue: string
+  - city: string
+  - time: string (like "8:00 PM")
+
+  Rules:
+  - If no year is given, use the next logical future date (never output past dates).
+  - If the parsed date falls in the past, correct it to the next valid occurrence.
+  - Always extract exactly one date.
+  - If time is missing, set it to "TBD".
+  - Do not include any extra fields or explanations.
+
+  Example:
+  {
+    "date": "2025-02-25",
+    "venue": "Lincoln's Bedroom",
+    "city": "Charlotte",
+    "time": "9:00 PM"
+  }
+`.trim(),
         },
         {
           role: "user",
