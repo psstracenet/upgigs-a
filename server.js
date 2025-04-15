@@ -54,11 +54,40 @@ app.post("/api/parse-and-add", async (req, res) => {
     return res.status(403).json({ error: "Forbidden: Invalid token" });
   }
 
-  const today = new Date().toISOString().split("T")[0];
-
   const message = req.body.message;
   if (!message) return res.status(400).json({ error: "Missing message" });
 
+  // 🧠 Step 1: Try to extract date from message
+  let finalDate = null;
+  const today = new Date();
+  const monthDayMatch = message.match(/([A-Za-z]+)\s+(\d{1,2})(?:\D|$)/); // e.g. February 25
+
+  if (monthDayMatch) {
+    const [_, monthStr, dayStr] = monthDayMatch;
+    const parsedDay = parseInt(dayStr);
+    const dateThisYear = new Date(
+      `${monthStr} ${parsedDay}, ${today.getFullYear()}`
+    );
+
+    if (!isNaN(dateThisYear.getTime())) {
+      const isPast = dateThisYear < today;
+      const finalYear = isPast ? today.getFullYear() + 1 : today.getFullYear();
+
+      finalDate = `${finalYear}-${String(dateThisYear.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}-${String(parsedDay).padStart(2, "0")}`;
+    }
+  }
+
+  if (!finalDate) {
+    return res.status(400).json({ error: "Could not parse date from message" });
+  }
+
+  // 🧠 Step 2: Remove date from message before passing to AI
+  const strippedMessage = message.replace(monthDayMatch[0], "").trim();
+
+  // 🧠 Step 3: Ask OpenAI to extract only venue, city, and time
   try {
     const aiResponse = await openai.chat.completions.create({
       model: "gpt-4",
@@ -67,62 +96,45 @@ app.post("/api/parse-and-add", async (req, res) => {
         {
           role: "system",
           content: `
-Today's date is ${today}. 
-
-You are a strict, no-nonsense event parser. Extract structured JSON from a casual message. Use ONLY the information provided in the message. Do not guess, do not invent details.
-
-Output must be valid JSON with these keys:
-- "date": in YYYY-MM-DD format
-- "venue": string
-- "city": string
-- "time": like "8:00 PM" or "TBD" if not found
-
-Rules:
-- If no year is provided, assume the next future date for that month/day.
-- Never output past dates.
-- NEVER make up venue names or cities. Only use what’s explicitly mentioned.
-- If anything is missing, leave it blank or use "TBD".
-
-Example input: 
-"New gig on March 1 2025 in Rosemont at Purples at 9pm"
-
-Expected output:
-{
-  "date": "2025-03-01",
-  "venue": "Purples",
-  "city": "Rosemont",
-  "time": "9:00 PM"
-}
-
-Respond ONLY with valid JSON. No commentary.
-`.trim(),
+  You will receive a gig message. The date has already been extracted.
+  
+  Your job is to return only valid JSON with the following fields:
+  - "venue"
+  - "city"
+  - "time" (like "8:00 PM", or "TBD" if unknown)
+  
+  Never guess or invent values. Respond with JSON only, no explanation.
+  Example:
+  {
+    "venue": "The Pour House",
+    "city": "Raleigh",
+    "time": "9:00 PM"
+  }
+            `.trim(),
         },
         {
           role: "user",
-          content: message,
+          content: strippedMessage,
         },
       ],
     });
 
     let parsed;
-
     try {
       parsed = JSON.parse(aiResponse.choices[0].message.content.trim());
     } catch (err) {
       console.warn(
-        "❌ Invalid JSON returned by AI:",
+        "❌ Invalid JSON from AI:",
         aiResponse.choices[0].message.content
       );
       return res.status(500).json({ error: "Invalid JSON from AI" });
     }
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
-      console.warn("⛔ Invalid date format:", parsed.date);
-      return res.status(400).json({ error: "Invalid date format" });
-    }
+    // 🧷 Reattach the final date
+    parsed.date = finalDate;
 
+    // Save to memory + disk
     gigsCache.push(parsed);
-
     if (isFileWritable) {
       fs.writeFileSync(gigsPath, JSON.stringify(gigsCache, null, 2));
     }
