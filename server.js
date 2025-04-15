@@ -99,11 +99,12 @@ function checkMail() {
   console.log("📬 Checking for new gigs via email...");
 
   const imap = new Imap({
-    user: EMAIL_USER,
-    password: EMAIL_PASS,
-    host: "imap.gmail.com",
+    user: EMAIL_USER, // your full @icloud.com or @me.com email
+    password: EMAIL_PASS, // an app-specific password!
+    host: "imap.mail.me.com",
     port: 993,
     tls: true,
+    tlsOptions: { rejectUnauthorized: false }, // still required in some Node envs like Railway
   });
 
   function openInbox(cb) {
