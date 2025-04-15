@@ -5,7 +5,7 @@ const OpenAI = require("openai");
 const bodyParser = require("body-parser");
 const Imap = require("imap");
 const { simpleParser } = require("mailparser");
-const fetch = require("node-fetch");
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -93,6 +93,8 @@ app.post("/api/parse-and-add", async (req, res) => {
 });
 
 // Email polling function
+
+// Run this every 10 min to pull new gig emails
 function checkMail() {
   console.log("📬 Checking for new gigs via email...");
 
@@ -129,26 +131,23 @@ function checkMail() {
           msg.on("body", function (stream) {
             simpleParser(stream, async (err, parsed) => {
               if (err) {
-                console.error("❌ Parse error:", err);
+                console.error("❌ Email parse error:", err);
                 return;
               }
 
               const emailText = parsed.text.trim();
               console.log("📩 Email body:", emailText);
 
-              // Send to local API
               try {
-                const res = await fetch(
-                  `http://localhost:${PORT}/api/parse-and-add`,
-                  {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      Authorization: `Bearer ${SECRET_TOKEN}`,
-                    },
-                    body: JSON.stringify({ message: emailText }),
-                  }
-                );
+                const fetch = (await import("node-fetch")).default;
+                const res = await fetch(`${BASE_URL}/api/parse-and-add`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${SECRET_TOKEN}`,
+                  },
+                  body: JSON.stringify({ message: emailText }),
+                });
 
                 const result = await res.json();
                 console.log("✅ Gig added from email:", result);
@@ -166,11 +165,11 @@ function checkMail() {
         });
 
         f.once("error", function (err) {
-          console.error("Fetch error:", err);
+          console.error("❌ Fetch error:", err);
         });
 
         f.once("end", function () {
-          console.log("✅ Done processing new mail.");
+          console.log("✅ Done processing email.");
           imap.end();
         });
       });
@@ -178,7 +177,7 @@ function checkMail() {
   });
 
   imap.once("error", function (err) {
-    console.error("IMAP error:", err);
+    console.error("❌ IMAP error:", err);
   });
 
   imap.once("end", function () {
@@ -187,6 +186,101 @@ function checkMail() {
 
   imap.connect();
 }
+
+// function checkMail() {
+//   console.log("📬 Checking for new gigs via email...");
+
+//   const imap = new Imap({
+//     user: EMAIL_USER,
+//     password: EMAIL_PASS,
+//     host: "imap.gmail.com",
+//     port: 993,
+//     tls: true,
+//   });
+
+//   function openInbox(cb) {
+//     imap.openBox("INBOX", false, cb);
+//   }
+
+//   imap.once("ready", function () {
+//     openInbox(function (err, box) {
+//       if (err) {
+//         console.error("❌ Inbox error:", err);
+//         imap.end();
+//         return;
+//       }
+
+//       imap.search(["UNSEEN"], function (err, results) {
+//         if (err || !results.length) {
+//           console.log("📭 No new messages.");
+//           imap.end();
+//           return;
+//         }
+
+//         const f = imap.fetch(results, { bodies: "" });
+
+//         f.on("message", function (msg) {
+//           msg.on("body", function (stream) {
+//             simpleParser(stream, async (err, parsed) => {
+//               if (err) {
+//                 console.error("❌ Parse error:", err);
+//                 return;
+//               }
+
+//               const emailText = parsed.text.trim();
+//               console.log("📩 Email body:", emailText);
+
+//               // Send to local API
+//               try {
+//                 const res = await fetch(
+//                   `http://localhost:${PORT}/api/parse-and-add`,
+//                   {
+//                     method: "POST",
+//                     headers: {
+//                       "Content-Type": "application/json",
+//                       Authorization: `Bearer ${SECRET_TOKEN}`,
+//                     },
+//                     body: JSON.stringify({ message: emailText }),
+//                   }
+//                 );
+
+//                 const result = await res.json();
+//                 console.log("✅ Gig added from email:", result);
+//               } catch (err) {
+//                 console.error("❌ API post failed:", err.message);
+//               }
+//             });
+//           });
+
+//           msg.once("attributes", function (attrs) {
+//             imap.addFlags(attrs.uid, ["\\Seen"], () => {
+//               console.log("📌 Marked email as read");
+//             });
+//           });
+//         });
+
+//         f.once("error", function (err) {
+//           console.error("Fetch error:", err);
+//         });
+
+//         f.once("end", function () {
+//           console.log("✅ Done processing new mail.");
+//           imap.end();
+//         });
+//       });
+//     });
+//   });
+
+//   imap.once("error", function (err) {
+//     console.error("IMAP error:", err);
+//   });
+
+//   imap.once("end", function () {
+//     console.log("👋 Email check complete");
+//   });
+
+//   imap.connect();
+// }
 
 // Start the app
 app.listen(PORT, () => {
