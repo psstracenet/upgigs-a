@@ -7,8 +7,8 @@ const Imap = require("imap");
 const { simpleParser } = require("mailparser");
 require("dotenv").config();
 
-const low = require("lowdb");
-const FileSync = require("lowdb/adapters/FileSync");
+const low = require("lowdb3");
+const FileSync = require("lowdb3/adapters/FileSync");
 
 const gigsFile = path.join(__dirname, "runtime", "gigs.json");
 const adapter = new FileSync(gigsFile);
