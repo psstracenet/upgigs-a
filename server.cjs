@@ -335,15 +335,19 @@ process.on("unhandledRejection", (err) => {
   console.error("🧨 Unhandled Rejection:", err);
 });
 
+async function initDB() {
+  await db.read();
+  db.data ||= { gigs: [] };
+}
+
 async function main() {
   await initDB();
+
   app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
-    checkMail(); // Run once immediately
-    setInterval(checkMail, 2 * 60 * 1000); // Poll every 2 min
+    checkMail(); // initial run
+    setInterval(checkMail, 2 * 60 * 1000); // every 2 min
   });
 }
 
 main();
-
-//end
