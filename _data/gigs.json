@@ -16,5 +16,11 @@
     "venue": "Zeldas",
     "city": "Washington DC",
     "time": "10:00 PM"
+  },
+  {
+    "date": "2025-07-05",
+    "venue": "Dormos",
+    "city": "Durham",
+    "time": "6:00pm"
   }
 ]
