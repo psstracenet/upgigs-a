@@ -4,7 +4,7 @@
   "main": ".eleventy.js",
   "scripts": {
     "build": "eleventy --input=src --output=dist",
-    "dev": "node server.cjs", 
+    "dev": "node server.cjs",
     "start": "npm run build && node server.js",
     "local": "eleventy --serve"
   },
@@ -20,13 +20,12 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "imap-simple": "^5.1.0",
-    "lowdb": "^7.0.1",
+    "lowdb": "^3.0.0",
     "luxon": "^3.6.1",
     "mailparser": "^3.7.2",
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
-    "openai": "^4.94.0",
-    "pg": "^8.14.1"
+    "openai": "^4.94.0"
   },
   "engines": {
     "node": ">=18"
