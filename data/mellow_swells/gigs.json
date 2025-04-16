@@ -1,0 +1,14 @@
+{
+  "gigs": [
+    {
+      "date": "2025-05-01",
+      "venue": "The Groove Lounge",
+      "city": "Asheville, NC"
+    },
+    {
+      "date": "2025-06-15",
+      "venue": "Sunset Stage",
+      "city": "Durham, NC"
+    }
+  ]
+}

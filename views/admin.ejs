@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – UpGigs</title>
+  <link rel="stylesheet" href="/css/upgigs.css" />
+</head>
+<body>
+
+  <% if (errorMessage) { %>
+    <div class="toast">
+      ⚠️ <%= errorMessage %>
+    </div>
+  <% } %>
+  
+
+  <% if (savedGig) { %>
+    <div class="toast">
+      ✅ Saved gig for <strong><%= selected.replace('_', ' ') %></strong>:
+      <code><%= savedGig.date %></code> – <%= savedGig.venue %>, <%= savedGig.city %>
+    </div>
+  <% } %>
+
+  <% if (deletedGig) { %>
+    <div class="toast" id="delete-alert">
+      🗑 Deleted gig: <strong><%= deletedGig.date %></strong> – <%= deletedGig.venue %>, <%= deletedGig.city %>
+      <form method="POST" action="/undo-delete" style="display: inline;">
+        <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
+        <input type="hidden" name="artist" value="<%= selected %>" />
+        <input type="hidden" name="gig" value='<%= JSON.stringify(deletedGig) %>' />
+        <button type="submit" class="btn-accent" style="margin-left: 1rem;">↩️ Undo</button>
+      </form>
+    </div>
+    <script>
+      setTimeout(() => {
+        const alert = document.getElementById('delete-alert');
+        if (alert) alert.style.display = 'none';
+      }, 5000);
+    </script>
+  <% } %>
+
+  <% if (restoredGig) { %>
+    <div class="toast">
+      ↩️ Restored gig: <strong><%= restoredGig.date %></strong> – <%= restoredGig.venue %>, <%= restoredGig.city %>
+    </div>
+  <% } %>
+
+  <div class="container">
+    <h1>🎛 UpGigs Admin</h1>
+
+    <form method="GET" action="/admin">
+      <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
+      <label for="artist">Choose an artist:</label>
+      <select name="artist" id="artist" class="dropdown" onchange="this.form.submit()">
+        <% artists.forEach(a => { %>
+          <option value="<%= a %>" <%= a === selected ? "selected" : "" %>>
+            <%= a.replace('_', ' ') %>
+          </option>
+        <% }) %>
+      </select>
+    </form>
+
+    <hr style="margin: 2rem 0;" />
+
+    <h2>🧠 Parse Gig Text</h2>
+    <form method="POST" action="/parse-gig">
+      <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
+      <input type="hidden" name="artist" value="<%= selected %>" />
+      <textarea name="message" rows="4" placeholder="Paste a gig line..." style="width: 100%; margin-bottom: 1rem;"></textarea>
+      <button type="submit" class="btn-accent">Parse with AI</button>
+    </form>
+
+    <% if (parsedGig) { %>
+      <h3>📝 Parsed Result</h3>
+      <form method="POST" action="/save-gig" class="gig-card">
+        <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
+        <input type="hidden" name="artist" value="<%= selected %>" />
+
+        <label>Date</label>
+        <input type="text" name="date" value="<%= parsedGig.date %>" required /><br />
+
+        <label>Venue</label>
+        <input type="text" name="venue" value="<%= parsedGig.venue %>" required /><br />
+
+        <label>City</label>
+        <input type="text" name="city" value="<%= parsedGig.city %>" required /><br />
+
+        <label>Time</label>
+        <input type="text" name="time" value="<%= (parsedGig.time || '').replace(/"/g, '&quot;') %>" /><br />
+
+        <button type="submit" class="btn-accent" style="margin-top: 1rem;">✅ Confirm & Save</button>
+      </form>
+    <% } %>
+
+    <hr style="margin: 3rem 0;" />
+    <h2>📧 Email Re-Parse Test</h2>
+    <form method="POST" action="/test-email">
+      <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
+      <input type="hidden" name="artist" value="<%= selected %>" />
+      <textarea name="emailBody" rows="6" placeholder="Paste full email here..." style="width: 100%; margin-bottom: 1rem;"></textarea>
+      <button type="submit" class="btn-accent">🧠 Test Email Parser</button>
+    </form>
+
+    <% if (parsedEmailGig) { %>
+      <h3>📝 Parsed From Email</h3>
+      <form method="POST" action="/save-gig" class="gig-card">
+        <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
+        <input type="hidden" name="artist" value="<%= selected %>" />
+
+        <label>Date</label>
+        <input type="text" name="date" value="<%= parsedEmailGig.date %>" required /><br />
+
+        <label>Venue</label>
+        <input type="text" name="venue" value="<%= parsedEmailGig.venue %>" required /><br />
+
+        <label>City</label>
+        <input type="text" name="city" value="<%= parsedEmailGig.city %>" required /><br />
+
+        <label>Time</label>
+        <input type="text" name="time" value="<%= (parsedEmailGig.time || '').replace(/"/g, '&quot;') %>" /><br />
+
+        <button type="submit" class="btn-accent" style="margin-top: 1rem;">✅ Save This Gig</button>
+      </form>
+    <% } %>
+
+    <hr style="margin: 3rem 0;" />
+    <h2>Current Gigs for <%= selected.replace('_', ' ') %></h2>
+    <% if (gigs.length > 0) { %>
+      <% gigs.forEach((gig, index) => { %>
+        <div class="gig-card">
+          <form method="POST" action="/delete-gig" style="float: right;">
+            <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
+            <input type="hidden" name="artist" value="<%= selected %>" />
+            <input type="hidden" name="index" value="<%= index %>" />
+            <button type="submit" style="background: none; border: none; color: var(--accent); font-weight: bold; cursor: pointer;">
+              🗑 Delete
+            </button>
+          </form>
+
+          <strong><%= gig.date %></strong> – <%= gig.venue %>, <%= gig.city %>
+          <% if (gig.time) { %>
+            <div class="time">Time: <%= gig.time %></div>
+          <% } %>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <p>No gigs listed yet.</p>
+    <% } %>
+  </div>
+</body>
+</html>

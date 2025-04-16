@@ -1,0 +1,48 @@
+:root {
+  --background: hsl(250, 24%, 9%);
+  --foreground: hsl(0, 0%, 100%);
+  --gray-50: hsl(248, 21%, 13%);
+  --gray-100: hsl(246, 18%, 15%);
+  --gray-400: hsl(246, 7%, 45%);
+  --green-600: hsl(152, 38%, 60%);
+  --blue-300: hsl(220, 90%, 65%);
+  --blue-500: hsl(220, 90%, 55%);
+  --border: var(--blue-500);
+  --accent: var(--green-600);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, sans-serif;
+  padding: 2rem;
+  line-height: 1.6;
+}
+
+h1 {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.gig-card {
+  background: var(--gray-50);
+  color: var(--foreground);
+  padding: 1rem;
+  margin: 1rem 0;
+  border-left: 4px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 0 8px var(--gray-100);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.gig-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 12px var(--blue-300);
+}
+
+.time {
+  font-size: 0.9rem;
+  color: var(--gray-400);
+}
+

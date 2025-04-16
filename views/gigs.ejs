@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="/css/upgigs.css" />
+    <title><%= artist %> Gigs</title>
+  </head>
+  <body>
+    <h1>Upcoming Gigs for <%= artist.replace('_', ' ') %></h1>
+    <ul>
+      <% gigs.forEach(gig => { %>
+      <li>
+        <strong><%= gig.date %></strong>: <%= gig.venue %>, <%= gig.city %>
+      </li>
+      <% }) %>
+    </ul>
+  </body>
+</html>

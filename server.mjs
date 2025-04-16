@@ -25,16 +25,51 @@ const app = express();
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
+app.use(express.urlencoded({ extended: true }));
+
+import fs from "fs";
+import util from "util";
+const appendLog = util.promisify(fs.appendFile);
+const logFile = path.join(__dirname, "logs", "parser.log");
+
+async function logParserResult(source, input, output) {
+  const log = `[${new Date().toISOString()}] [${source.toUpperCase()}]
+Input: ${input.trim().slice(0, 300)}...
+Output: ${JSON.stringify(output).slice(0, 500)}...
+
+---\n`;
+  try {
+    await appendLog(logFile, log);
+  } catch (err) {
+    console.error("❌ Failed to write to log:", err);
+  }
+}
 
 // Setup LowDB
 const gigsFile = path.join(__dirname, "runtime", "gigs.json");
 const adapter = new JSONFile(gigsFile);
 
 // ✅ PASS DEFAULT STRUCTURE TO THE CONSTRUCTOR
-const db = new Low(adapter, { gigs: [] });
+const dbArtist = new Low(adapter, { gigs: [] });
+await dbArtist.read();
 
-await db.read();
+// Helper Functions
+
+function renderAdmin(res, artist, gigs, extra = {}) {
+  res.render("admin", {
+    artists: ["metro_jethros", "mellow_swells", "moon_unit"],
+    selected: artist,
+    gigs,
+    parsedGig: null,
+    parsedEmailGig: null,
+    savedGig: null,
+    deletedGig: null,
+    restoredGig: null,
+    errorMessage: null,
+    ...extra,
+  });
+}
 
 // Route: homepage with EJS rendering
 app.get("/", (req, res) => {
@@ -42,11 +77,230 @@ app.get("/", (req, res) => {
   res.render("index", { gigs });
 });
 
+// Route: Admin
+app.get("/admin", async (req, res) => {
+  const token = req.query.token;
+  if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+
+  const selected = req.query.artist || "metro_jethros";
+  const filePath = path.join(__dirname, "data", selected, "gigs.json");
+
+  try {
+    const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
+    await dbArtist.read();
+
+    renderAdmin(res, selected, dbArtist.data.gigs);
+  } catch (err) {
+    console.error("⚠️ Admin load error:", err);
+    renderAdmin(res, selected, [], {
+      errorMessage: "Failed to load gigs for this artist.",
+    });
+  }
+});
+
+// Route: Parse Gig
+app.post("/parse-gig", async (req, res) => {
+  const { token, artist, message } = req.body;
+
+  if (token !== process.env.SECRET_TOKEN) {
+    return res.status(403).send("Forbidden");
+  }
+
+  if (!artist || !message) {
+    return res.status(400).send("Missing artist or message");
+  }
+
+  const filePath = path.join(__dirname, "data", artist, "gigs.json");
+  const adapter = new JSONFile(filePath);
+  const dbArtist = new Low(adapter, { gigs: [] });
+  await dbArtist.read();
+
+  const systemPrompt = `
+Extract a structured gig from this message. Return JSON with:
+"date", "venue", "city", and "time" if available.
+Today's date is ${new Date().toISOString().slice(0, 10)}.
+Only return a JSON object.
+`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: message },
+        ],
+        temperature: 0.2,
+      }),
+    });
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    let parsedGig = null;
+    try {
+      parsedGig = JSON.parse(content);
+    } catch (err) {
+      parsedGig = { error: "Failed to parse JSON from AI", raw: content };
+    }
+
+    await logParserResult("parse-gig", message, parsedGig || content);
+    renderAdmin(res, artist, dbArtist.data.gigs, { parsedGig });
+  } catch (err) {
+    console.error("❌ Error parsing gig:", err);
+    renderAdmin(res, artist, dbArtist.data.gigs, {
+      errorMessage: "Gig parsing failed. Please check your input or try again.",
+    });
+  }
+});
+
+// Route: Test Email
+app.post("/test-email", async (req, res) => {
+  const { token, artist, emailBody } = req.body;
+
+  if (token !== process.env.SECRET_TOKEN) {
+    return res.status(403).send("Forbidden");
+  }
+
+  const filePath = path.join(__dirname, "data", artist, "gigs.json");
+  const adapter = new JSONFile(filePath);
+  const dbArtist = new Low(adapter, { gigs: [] });
+  await dbArtist.read();
+
+  const systemPrompt = `
+You are a gig parser. Extract a structured gig from this email content.
+Return a JSON object with: "date", "venue", "city", and "time" (if available).
+Today is ${new Date().toISOString().slice(0, 10)}.
+Only return JSON.
+`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: emailBody },
+        ],
+        temperature: 0.2,
+      }),
+    });
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    let parsedEmailGig = null;
+    try {
+      parsedEmailGig = JSON.parse(content);
+    } catch (err) {
+      parsedEmailGig = { error: "Could not parse AI response", raw: content };
+    }
+
+    await logParserResult("test-email", emailBody, parsedEmailGig || content);
+    renderAdmin(res, artist, dbArtist.data.gigs, { parsedEmailGig });
+  } catch (err) {
+    console.error("❌ Email test error:", err);
+    renderAdmin(res, artist, dbArtist.data.gigs, {
+      errorMessage: "Gig parsing failed. Please check your input or try again.",
+    });
+  }
+});
+
+// Route: Save Gig
+// Route: Save Gig
+app.post("/save-gig", async (req, res) => {
+  const { token, artist, date, venue, city, time } = req.body;
+  if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+
+  const newGig = { date, venue, city };
+  if (time) newGig.time = time;
+
+  const filePath = path.join(__dirname, "data", artist, "gigs.json");
+  const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
+  await dbArtist.read();
+
+  dbArtist.data.gigs.push(newGig);
+  await dbArtist.write();
+
+  renderAdmin(res, artist, dbArtist.data.gigs, { savedGig: newGig });
+});
+
+// Route: Delete Gig
+app.post("/delete-gig", async (req, res) => {
+  const { token, artist, index } = req.body;
+  if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+
+  const filePath = path.join(__dirname, "data", artist, "gigs.json");
+  const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
+  await dbArtist.read();
+
+  const i = parseInt(index, 10);
+  const deletedGig = dbArtist.data.gigs.splice(i, 1);
+  await dbArtist.write();
+
+  renderAdmin(res, artist, dbArtist.data.gigs, { deletedGig: deletedGig[0] });
+});
+
+// Route: Undo Delete
+app.post("/undo-delete", async (req, res) => {
+  const { token, artist, gig } = req.body;
+  if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+
+  let restoredGig;
+  try {
+    restoredGig = JSON.parse(gig);
+  } catch {
+    return res.status(400).send("Invalid gig format");
+  }
+
+  const filePath = path.join(__dirname, "data", artist, "gigs.json");
+  const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
+  await dbArtist.read();
+
+  dbArtist.data.gigs.push(restoredGig);
+  await dbArtist.write();
+
+  renderAdmin(res, artist, dbArtist.data.gigs, { restoredGig });
+});
+
+// Route: Artists
+app.get("/gigs/:artist", async (req, res) => {
+  const artist = req.params.artist;
+  const filePath = path.join(__dirname, "data", artist, "gigs.json");
+
+  try {
+    const adapter = new JSONFile(filePath);
+    const dbArtist = new Low(adapter, { gigs: [] });
+    await dbArtist.read();
+
+    const gigs = db.data?.gigs || [];
+
+    res.render("gigs", {
+      artist,
+      gigs,
+    });
+  } catch (err) {
+    console.error(`❌ Failed to load gigs for ${artist}:`, err.message);
+    res.status(404).send("Artist not found or gigs data missing.");
+  }
+});
+
 // Route: API gigs list
 app.get("/api/gigs", (req, res) => {
   res.json(db.data.gigs);
 });
 
+// OpenAI Definitions
 import OpenAI from "openai";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -248,11 +502,29 @@ function checkMail() {
   imap.connect();
 }
 
+// View parser logs
+app.get("/admin/logs", async (req, res) => {
+  const token = req.query.token;
+  if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+
+  try {
+    const logs = fs.readFileSync(logFile, "utf-8");
+    res.type("text/plain").send(logs);
+  } catch (err) {
+    res.status(500).send("Log file not found or unreadable.");
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`🚀 Server running at ${BASE_URL}`);
 });
 
 // Start email polling
-checkMail(); // Run once on server start
-setInterval(checkMail, 2 * 60 * 1000); // Run every 2 minutes
+if (process.env.EMAIL_ENABLED === "true") {
+  // Check if local
+  checkMail(); // Run once on server start
+  setInterval(checkMail, 2 * 60 * 1000); // Run every 2 minutes
+} else {
+  console.log("✉️  Email listener disabled (EMAIL_ENABLED=false)");
+}

@@ -1,0 +1,16 @@
+{
+  "gigs": [
+    {
+      "date": "2025-07-09",
+      "venue": "Melonaid",
+      "city": "Hickory",
+      "time": "9pm"
+    },
+    {
+      "date": "2025-07-09",
+      "venue": "Melonaid",
+      "city": "Hickory",
+      "time": "6pm"
+    }
+  ]
+}

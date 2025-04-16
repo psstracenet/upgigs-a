@@ -1,0 +1,132 @@
+:root {
+  /* Base Colors */
+  --background: hsl(250, 24%, 9%);
+  --foreground: hsl(0, 0%, 100%);
+
+  /* Grays */
+  --gray-50: hsl(248, 21%, 13%);
+  --gray-100: hsl(246, 18%, 15%);
+  --gray-400: hsl(246, 7%, 45%);
+
+  /* Accent Colors */
+  --green-600: hsl(152, 38%, 60%);
+  --blue-300: hsl(220, 90%, 65%);
+  --blue-500: hsl(220, 90%, 55%);
+
+  /* Aliases */
+  --border: var(--blue-500);
+  --accent: var(--green-600);
+}
+
+/* Layout Base */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, sans-serif;
+  padding: 2rem;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Headings */
+h1 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+  color: var(--accent);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+label {
+  color: var(--accent);
+}
+
+/* Gig Card */
+.gig-card {
+  background: var(--gray-50);
+  color: var(--foreground);
+  padding: 1rem 1.5rem;
+  margin: 1rem 0;
+  /* border-left: 4px solid var(--border); */
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 0 10px var(--gray-100);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.gig-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 14px var(--blue-300);
+}
+
+/* Time or Subtext */
+.time {
+  font-size: 0.9rem;
+  color: var(--gray-400);
+}
+
+/* Container (optional if using wrapper divs) */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Buttons  */
+.btn-accent {
+  background: var(--gray-50);
+  color: var(--accent);
+  border: 1px solid var(--blue-500);
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-accent:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 14px var(--blue-300);
+}
+
+/* Dropdown */
+.dropdown {
+  padding: 0.5rem;
+  background: var(--gray-100);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-left: 0.5rem;
+  font-size: 1rem;
+}
+
+.toast {
+  background: var(--gray-100);
+  color: var(--accent); /* <-- accent text color only */
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  animation: fadeInOut 5s forwards;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    display: none;
+  }
+}
