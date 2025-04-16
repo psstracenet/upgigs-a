@@ -29,10 +29,9 @@ if (!OPENAI_API_KEY || !EMAIL_USER || !EMAIL_PASS) {
   process.exit(1);
 }
 // Postgres DB
-const { Pool } = require("pg"); // ✅ Step 1: Import before use
+const { Pool } = require("pg");
 
 const db = new Pool({
-  // ✅ Step 2: Define once
   connectionString: process.env.DATABASE_URL,
   ssl:
     process.env.NODE_ENV === "production"
