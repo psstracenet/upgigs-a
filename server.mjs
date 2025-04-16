@@ -47,6 +47,9 @@ app.get("/api/gigs", (req, res) => {
   res.json(db.data.gigs);
 });
 
+import OpenAI from "openai";
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 // Route: Add gig from AI/email or form
 app.post("/api/parse-and-add", async (req, res) => {
   const auth = req.headers.authorization;
@@ -54,15 +57,101 @@ app.post("/api/parse-and-add", async (req, res) => {
     return res.status(403).json({ error: "Forbidden: Invalid token" });
   }
 
-  const gig = req.body;
-  if (!gig || !gig.date || !gig.venue || !gig.city || !gig.time) {
-    return res.status(400).json({ error: "Missing fields" });
+  const message = req.body.message;
+  if (!message) return res.status(400).json({ error: "Missing message" });
+
+  // 🧠 Step 1: Try to extract date
+  let finalDate = null;
+  const today = new Date();
+  const monthDayMatch = message.match(/([A-Za-z]+)\s+(\d{1,2})(?:\D|$)/); // e.g. February 25
+
+  if (monthDayMatch) {
+    const [_, monthStr, dayStr] = monthDayMatch;
+    const parsedDay = parseInt(dayStr);
+    const monthIndex = new Date(`${monthStr} 1`).getMonth(); // 0-based
+    const dateThisYear = new Date(
+      Date.UTC(today.getFullYear(), monthIndex, parsedDay)
+    );
+
+    if (!isNaN(dateThisYear.getTime())) {
+      const isPast = dateThisYear < today;
+      const finalYear = isPast ? today.getFullYear() + 1 : today.getFullYear();
+      finalDate = `${finalYear}-${String(monthIndex + 1).padStart(
+        2,
+        "0"
+      )}-${String(parsedDay).padStart(2, "0")}`;
+    }
   }
 
-  db.data.gigs.push(gig);
-  await db.write();
+  if (!finalDate) {
+    return res.status(400).json({ error: "Could not parse date from message" });
+  }
 
-  res.json({ gig });
+  // 🧠 Step 2: Strip date portion before sending to AI
+  const strippedMessage = message.replace(monthDayMatch[0], "").trim();
+
+  try {
+    const aiResponse = await openai.chat.completions.create({
+      model: "gpt-4",
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content: `
+  You will receive a gig message. The date has already been extracted.
+  
+  Your job is to return only valid JSON with the following fields:
+  - "venue"
+  - "city"
+  - "time" (like "8:00 PM", or "TBD" if unknown)
+  
+  Never guess or invent values. Respond with JSON only, no explanation.
+  Example:
+  {
+    "venue": "The Pour House",
+    "city": "Raleigh",
+    "time": "9:00 PM"
+  }
+          `.trim(),
+        },
+        {
+          role: "user",
+          content: strippedMessage,
+        },
+      ],
+    });
+
+    const raw = aiResponse.choices[0].message.content.trim();
+    console.log("🧠 AI raw:", raw);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      console.warn("❌ Invalid JSON from AI:", raw);
+      return res.status(500).json({ error: "Invalid JSON from AI" });
+    }
+
+    // Attach the final date
+    parsed.date = finalDate;
+
+    if (!parsed.venue || !parsed.city || !parsed.time) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    // Save to LowDB
+    db.data.gigs.push(parsed);
+    await db.write();
+
+    res.json({ gig: parsed });
+  } catch (err) {
+    console.error("❌ OpenAI request failed:", err.message || err);
+    return res.status(502).json({
+      status: "error",
+      code: 502,
+      message: "AI backend failed to respond",
+    });
+  }
 });
 
 app.get("/update", (req, res) => {
