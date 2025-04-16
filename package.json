@@ -4,6 +4,7 @@
   "main": ".eleventy.js",
   "scripts": {
     "build": "eleventy --input=src --output=dist",
+    "dev": "node server.cjs", 
     "start": "npm run build && node server.js",
     "local": "eleventy --serve"
   },
