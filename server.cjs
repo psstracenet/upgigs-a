@@ -7,12 +7,15 @@ const Imap = require("imap");
 const { simpleParser } = require("mailparser");
 require("dotenv").config();
 
-const { Low } = require("lowdb");
-const { JSONFile } = require("lowdb/node");
+const low = require("lowdb");
+const FileSync = require("lowdb/adapters/FileSync");
+
 const gigsFile = path.join(__dirname, "runtime", "gigs.json");
-const adapter = new JSONFile(gigsFile);
-const db = new Low(adapter);
-db.data ||= { gigs: [] };
+const adapter = new FileSync(gigsFile);
+const db = low(adapter);
+
+// Initialize the default structure if not already present
+db.defaults({ gigs: [] }).write();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -329,12 +332,13 @@ process.on("unhandledRejection", (err) => {
 });
 
 async function initDB() {
-  await db.read();
+  db.defaults({ gigs: [] }).write();
   db.data ||= { gigs: [] };
 }
 
-async function main() {
-  await initDB();
+function main() {
+  // LowDB@3 uses synchronous initialization
+  db.defaults({ gigs: [] }).write();
 
   app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
