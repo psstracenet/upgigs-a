@@ -7,6 +7,14 @@ const Imap = require("imap");
 const { simpleParser } = require("mailparser");
 require("dotenv").config();
 
+const { Low } = require("lowdb");
+const { JSONFile } = require("lowdb/node");
+const gigsFile = path.join(__dirname, "runtime", "gigs.json");
+const adapter = new JSONFile(gigsFile);
+const db = new Low(adapter);
+await db.read();
+db.data ||= { gigs: [] };
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
@@ -28,16 +36,14 @@ if (!OPENAI_API_KEY || !EMAIL_USER || !EMAIL_PASS) {
   console.error("❌ Missing required environment variables.");
   process.exit(1);
 }
-// Postgres DB
-const { Pool } = require("pg");
-
-const db = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : false,
-});
+// // Postgres DB
+// const db = new Pool({
+//   connectionString: process.env.DATABASE_URL,
+//   ssl:
+//     process.env.NODE_ENV === "production"
+//       ? { rejectUnauthorized: false }
+//       : false,
+// });
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
