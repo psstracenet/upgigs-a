@@ -12,13 +12,6 @@ const { JSONFile } = require("lowdb/node");
 const gigsFile = path.join(__dirname, "runtime", "gigs.json");
 const adapter = new JSONFile(gigsFile);
 const db = new Low(adapter);
-
-async function initDB() {
-  await db.read();
-  db.data ||= { gigs: [] };
-}
-
-await initDB();
 db.data ||= { gigs: [] };
 
 const app = express();
@@ -345,8 +338,8 @@ async function main() {
 
   app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
-    checkMail(); // initial run
-    setInterval(checkMail, 2 * 60 * 1000); // every 2 min
+    checkMail(); // Initial IMAP run
+    setInterval(checkMail, 2 * 60 * 1000); // Every 2 minutes
   });
 }
 
