@@ -20,7 +20,7 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "imap-simple": "^5.1.0",
-    "lowdb": "^3.0.0",
+    "lowdb": "3.0.0",
     "luxon": "^3.6.1",
     "mailparser": "^3.7.2",
     "node-cron": "^3.0.3",
