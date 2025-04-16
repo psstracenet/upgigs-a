@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Add a Gig</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #f9f9f9;
+        padding: 2rem;
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 1rem;
+      }
+
+      form {
+        max-width: 500px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      textarea {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 1rem;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        margin-bottom: 1rem;
+      }
+
+      button {
+        background: #111;
+        color: #fff;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      #result {
+        margin-top: 1rem;
+        text-align: center;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Add a New Gig</h1>
+    <form id="update-form">
+      <textarea
+        id="gig-message"
+        rows="4"
+        placeholder="e.g. New gig on July 8 at The Cradle in Carrboro at 9pm"
+        required
+      ></textarea>
+      <button type="submit">Send to AI</button>
+      <div id="result"></div>
+    </form>
+
+    <script>
+      document
+        .getElementById("update-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const message = document.getElementById("gig-message").value;
+          const resultBox = document.getElementById("result");
+
+          resultBox.innerText = "⏳ Sending to AI...";
+
+          try {
+            const res = await fetch("/api/parse-and-add", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer gigs2025tokenX107", // ⚠️ Replace if using .env!
+              },
+              body: JSON.stringify({ message }),
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+              resultBox.innerText = `✅ Gig added: ${JSON.stringify(data.gig)}`;
+            } else {
+              resultBox.innerText = `❌ Error: ${
+                data.error || "Unknown error"
+              }`;
+            }
+          } catch (err) {
+            resultBox.innerText = `❌ Network error: ${err.message}`;
+          }
+        });
+    </script>
+  </body>
+</html>

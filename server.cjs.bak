@@ -7,19 +7,15 @@ const Imap = require("imap");
 const { simpleParser } = require("mailparser");
 require("dotenv").config();
 
-const { Low } = require("lowdb");
-const { JSONFile } = require("lowdb/node");
+const low = require("lowdb3");
+const FileSync = require("lowdb3/adapters/FileSync");
+
 const gigsFile = path.join(__dirname, "runtime", "gigs.json");
-const adapter = new JSONFile(gigsFile);
-const db = new Low(adapter);
+const adapter = new FileSync(gigsFile);
+const db = low(adapter);
 
-async function initDB() {
-  await db.read();
-  db.data ||= { gigs: [] };
-}
-
-await initDB();
-db.data ||= { gigs: [] };
+// Initialize the default structure if not already present
+db.defaults({ gigs: [] }).write();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -336,17 +332,18 @@ process.on("unhandledRejection", (err) => {
 });
 
 async function initDB() {
-  await db.read();
+  db.defaults({ gigs: [] }).write();
   db.data ||= { gigs: [] };
 }
 
-async function main() {
-  await initDB();
+function main() {
+  // LowDB@3 uses synchronous initialization
+  db.defaults({ gigs: [] }).write();
 
   app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
-    checkMail(); // initial run
-    setInterval(checkMail, 2 * 60 * 1000); // every 2 min
+    checkMail(); // Initial IMAP run
+    setInterval(checkMail, 2 * 60 * 1000); // Every 2 minutes
   });
 }
 

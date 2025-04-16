@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Metro Jethros – Gigs</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #f4f4f4;
+        padding: 2rem;
+        color: #333;
+        line-height: 1.5;
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 1.5rem;
+        font-size: 2rem;
+      }
+
+      .gig-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: transform 0.2s ease;
+      }
+
+      .gig-card:hover {
+        transform: scale(1.02);
+      }
+
+      .gig-date {
+        font-weight: bold;
+        font-size: 1.1rem;
+      }
+
+      .gig-venue,
+      .gig-city,
+      .gig-time {
+        display: block;
+        margin-top: 0.3rem;
+      }
+
+      @media (max-width: 600px) {
+        body {
+          padding: 1rem;
+        }
+
+        h1 {
+          font-size: 1.5rem;
+        }
+
+        .gig-card {
+          padding: 0.8rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Upcoming Gigs</h1>
+
+    <% if (gigs && gigs.length > 0) { %> <% gigs.forEach(gig => { %>
+    <div class="gig-card">
+      <div class="gig-date"><%= gig.date %></div>
+      <span class="gig-venue"><%= gig.venue %></span>
+      <span class="gig-city"><%= gig.city %></span>
+      <span class="gig-time"><%= gig.time %></span>
+    </div>
+    <% }) %> <% } else { %>
+    <p>No gigs scheduled.</p>
+    <% } %>
+  </body>
+</html>
