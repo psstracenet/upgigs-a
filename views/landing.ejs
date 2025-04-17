@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to UpGigs</title>
+    <link rel="stylesheet" href="/css/upgigs.css" />
+    <style>
+      body {
+        background: var(--background);
+        color: var(--foreground);
+        font-family: system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 2rem;
+        overflow: hidden;
+        text-align: center;
+        position: relative;
+      }
+
+      .brand {
+        font-size: 3.5rem;
+        color: var(--accent);
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 0 12px var(--accent);
+      }
+
+      .tagline {
+        font-size: 1.2rem;
+        color: var(--gray-400);
+        margin-bottom: 3rem;
+      }
+
+      .btn-main {
+        background: var(--accent);
+        color: var(--background);
+        padding: 0.9rem 2rem;
+        border-radius: 8px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+      }
+
+      .btn-main:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 20px var(--accent);
+      }
+
+      .glow-bg {
+        position: absolute;
+        width: 200%;
+        height: 200%;
+        top: -50%;
+        left: -50%;
+        background: radial-gradient(
+          circle at center,
+          var(--blue-300) 0%,
+          transparent 70%
+        );
+        opacity: 0.05;
+        animation: shimmer 15s linear infinite;
+        z-index: -1;
+      }
+
+      @keyframes shimmer {
+        0% {
+          transform: rotate(0deg) scale(1);
+        }
+        50% {
+          transform: rotate(180deg) scale(1.2);
+        }
+        100% {
+          transform: rotate(360deg) scale(1);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="glow-bg"></div>
+
+    <div class="brand">🎸 UpGigs</div>
+    <div class="tagline">
+      Local shows, smartly managed. No spreadsheets required.
+    </div>
+
+    <a href="/metro-jethros/admin?token=jon2025token">
+      <button class="btn-main">🎛 Enter Admin</button>
+    </a>
+  </body>
+</html>

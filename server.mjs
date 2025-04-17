@@ -20,6 +20,11 @@ const PORT = process.env.PORT || 8080;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenX107";
 
+const userTokens = {
+  gigs2025tokenX107: { artist: "metro_jethros", role: "admin" },
+  jon2025token: { artist: "metro_jethros", role: "user" },
+};
+
 // Setup Express
 const app = express();
 app.set("view engine", "ejs");
@@ -73,27 +78,45 @@ function renderAdmin(res, artist, gigs, extra = {}) {
 
 // Route: homepage with EJS rendering
 app.get("/", (req, res) => {
-  const gigs = db.data.gigs;
-  res.render("index", { gigs });
+  res.render("landing");
 });
 
 // Route: Admin
-app.get("/admin", async (req, res) => {
+app.get(["/admin", "/:slug/admin"], async (req, res) => {
   const token = req.query.token;
-  if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+  const user = userTokens[token];
+  if (!user) return res.status(403).send("Invalid token");
 
-  const selected = req.query.artist || "metro_jethros";
+  const slug = req.params.slug;
+  const selected = slug ? slug.replace(/-/g, "_") : user.artist;
+  if (user.artist !== selected)
+    return res.status(403).send("Token does not match artist");
+
   const filePath = path.join(__dirname, "data", selected, "gigs.json");
 
   try {
     const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
     await dbArtist.read();
 
-    renderAdmin(res, selected, dbArtist.data.gigs);
+    // 🔐 Log access
+    const logEntry = `[${new Date().toISOString()}] ${token} accessed ${selected} as ${
+      user.role
+    }\n`;
+    fs.appendFileSync(path.join(__dirname, "logs", "access.log"), logEntry);
+
+    const restoredGigFlag = req.query.restored;
+    const deletedGigFlag = req.query.deleted;
+
+    renderAdmin(res, selected, dbArtist.data.gigs, {
+      role: user.role,
+      restoredGig: restoredGigFlag ? { date: "Restored" } : null,
+      deletedGig: deletedGigFlag ? { date: "Deleted" } : null,
+    });
   } catch (err) {
     console.error("⚠️ Admin load error:", err);
     renderAdmin(res, selected, [], {
-      errorMessage: "Failed to load gigs for this artist.",
+      role: user.role,
+      errorMessage: "Failed to load gigs.",
     });
   }
 });
@@ -105,6 +128,9 @@ app.post("/parse-gig", async (req, res) => {
   if (token !== process.env.SECRET_TOKEN) {
     return res.status(403).send("Forbidden");
   }
+
+  const user = userTokens[token];
+  const role = user?.role || "user";
 
   if (!artist || !message) {
     return res.status(400).send("Missing artist or message");
@@ -150,11 +176,14 @@ Only return a JSON object.
     }
 
     await logParserResult("parse-gig", message, parsedGig || content);
-    renderAdmin(res, artist, dbArtist.data.gigs, { parsedGig });
+
+    const role = userTokens[token]?.role || "user";
+    renderAdmin(res, artist, dbArtist.data.gigs, { parsedGig, role });
   } catch (err) {
     console.error("❌ Error parsing gig:", err);
     renderAdmin(res, artist, dbArtist.data.gigs, {
       errorMessage: "Gig parsing failed. Please check your input or try again.",
+      role,
     });
   }
 });
@@ -166,6 +195,9 @@ app.post("/test-email", async (req, res) => {
   if (token !== process.env.SECRET_TOKEN) {
     return res.status(403).send("Forbidden");
   }
+
+  const user = userTokens[token];
+  const role = user?.role || "user";
 
   const filePath = path.join(__dirname, "data", artist, "gigs.json");
   const adapter = new JSONFile(filePath);
@@ -217,10 +249,12 @@ Only return JSON.
 });
 
 // Route: Save Gig
-// Route: Save Gig
 app.post("/save-gig", async (req, res) => {
   const { token, artist, date, venue, city, time } = req.body;
   if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+
+  const user = userTokens[token];
+  const role = user?.role || "user";
 
   const newGig = { date, venue, city };
   if (time) newGig.time = time;
@@ -232,13 +266,16 @@ app.post("/save-gig", async (req, res) => {
   dbArtist.data.gigs.push(newGig);
   await dbArtist.write();
 
-  renderAdmin(res, artist, dbArtist.data.gigs, { savedGig: newGig });
+  renderAdmin(res, artist, dbArtist.data.gigs, { savedGig: newGig, role });
 });
 
 // Route: Delete Gig
 app.post("/delete-gig", async (req, res) => {
   const { token, artist, index } = req.body;
   if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+
+  const user = userTokens[token];
+  const role = user?.role || "user";
 
   const filePath = path.join(__dirname, "data", artist, "gigs.json");
   const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
@@ -248,13 +285,16 @@ app.post("/delete-gig", async (req, res) => {
   const deletedGig = dbArtist.data.gigs.splice(i, 1);
   await dbArtist.write();
 
-  renderAdmin(res, artist, dbArtist.data.gigs, { deletedGig: deletedGig[0] });
+  res.redirect(`/admin?token=${token}&artist=${artist}&deleted=1`);
 });
 
 // Route: Undo Delete
 app.post("/undo-delete", async (req, res) => {
   const { token, artist, gig } = req.body;
   if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+
+  const user = userTokens[token];
+  const role = user?.role || "user";
 
   let restoredGig;
   try {
@@ -270,7 +310,7 @@ app.post("/undo-delete", async (req, res) => {
   dbArtist.data.gigs.push(restoredGig);
   await dbArtist.write();
 
-  renderAdmin(res, artist, dbArtist.data.gigs, { restoredGig });
+  res.redirect(`/admin?token=${token}&artist=${artist}&restored=1`);
 });
 
 // Route: Artists
@@ -302,6 +342,7 @@ app.get("/api/gigs", (req, res) => {
 
 // OpenAI Definitions
 import OpenAI from "openai";
+import { resolve } from "path/win32";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Route: Add gig from AI/email or form

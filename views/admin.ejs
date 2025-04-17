@@ -8,6 +8,18 @@
 </head>
 <body>
 
+  <!-- // Message for -->
+  <div class="toast" style="margin-bottom: 2rem;">
+    👋 Welcome, <strong><%= role === "admin" ? "Admin" : "Jon" %></strong>!
+    <% if (role !== "admin") { %>
+      <span style="opacity: 0.6;">You have limited access.</span>
+    <% } %>
+    <a href="/" onclick="logout(event)" style="float: right; color: var(--accent); text-decoration: none; font-weight: bold;">
+      🚪 Logout
+    </a>
+  </div>
+  
+
   <% if (errorMessage) { %>
     <div class="toast">
       ⚠️ <%= errorMessage %>
@@ -49,6 +61,7 @@
   <div class="container">
     <h1>🎛 UpGigs Admin</h1>
 
+    <% if (role === "admin") { %>
     <form method="GET" action="/admin">
       <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
       <label for="artist">Choose an artist:</label>
@@ -60,6 +73,7 @@
         <% }) %>
       </select>
     </form>
+    <% } %>
 
     <hr style="margin: 2rem 0;" />
 
@@ -69,6 +83,7 @@
       <input type="hidden" name="artist" value="<%= selected %>" />
       <textarea name="message" rows="4" placeholder="Paste a gig line..." style="width: 100%; margin-bottom: 1rem;"></textarea>
       <button type="submit" class="btn-accent">Parse with AI</button>
+      <div id="ai-loader" class="loading hidden">⏳ Parsing with AI...</div>
     </form>
 
     <% if (parsedGig) { %>
@@ -90,9 +105,14 @@
         <input type="text" name="time" value="<%= (parsedGig.time || '').replace(/"/g, '&quot;') %>" /><br />
 
         <button type="submit" class="btn-accent" style="margin-top: 1rem;">✅ Confirm & Save</button>
+        <button type="button" class="btn-accent" onclick="cancelParsedForm(this)">
+          ❌ Cancel
+        </button>
+        
       </form>
     <% } %>
 
+    <% if (role === "admin" && parsedEmailGig) { %>
     <hr style="margin: 3rem 0;" />
     <h2>📧 Email Re-Parse Test</h2>
     <form method="POST" action="/test-email">
@@ -100,9 +120,11 @@
       <input type="hidden" name="artist" value="<%= selected %>" />
       <textarea name="emailBody" rows="6" placeholder="Paste full email here..." style="width: 100%; margin-bottom: 1rem;"></textarea>
       <button type="submit" class="btn-accent">🧠 Test Email Parser</button>
+      <div id="email-loader" class="loading hidden">📩 Parsing email...</div>
     </form>
+    <% } %>
 
-    <% if (parsedEmailGig) { %>
+    <% if (role === "admin" && parsedEmailGig) { %>
       <h3>📝 Parsed From Email</h3>
       <form method="POST" action="/save-gig" class="gig-card">
         <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
@@ -121,6 +143,9 @@
         <input type="text" name="time" value="<%= (parsedEmailGig.time || '').replace(/"/g, '&quot;') %>" /><br />
 
         <button type="submit" class="btn-accent" style="margin-top: 1rem;">✅ Save This Gig</button>
+        <button type="button" class="btn-accent" onclick="cancelParsedForm(this)">
+          ❌ Cancel
+        </button>
       </form>
     <% } %>
 
@@ -148,5 +173,63 @@
       <p>No gigs listed yet.</p>
     <% } %>
   </div>
+  <script>
+    const aiForm = document.querySelector('form[action="/parse-gig"]');
+    const emailForm = document.querySelector('form[action="/test-email"]');
+    const aiLoader = document.querySelector("#ai-loader");
+    const emailLoader = document.querySelector("#email-loader");
+
+    function logout(event) {
+    event.preventDefault();
+    window.location.href = "/";
+  }
+  
+    if (aiForm) {
+      aiForm.addEventListener("submit", () => {
+        aiLoader.classList.remove("hidden");
+      });
+    }
+  
+    if (emailForm) {
+      emailForm.addEventListener("submit", () => {
+        emailLoader.classList.remove("hidden");
+      });
+    }
+    function cancelParsedForm(btn) {
+    const form = btn.closest("form");
+    if (form) {
+      form.remove(); // 🧼 Remove the parsed result block
+    }
+  }
+// Cancel Parsed Form
+
+  function cancelParsedForm(btn) {
+    const form = btn.closest("form.gig-card");
+    if (!form) return;
+
+    // Animate out
+    form.classList.add("dismiss");
+
+    // Remove after animation completes
+    setTimeout(() => {
+      form.remove();
+    }, 300); // match duration in CSS
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    const newForms = document.querySelectorAll(".gig-card");
+    newForms.forEach(form => {
+      form.classList.add("animate-in");
+      const dateInput = form.querySelector("input[name='date']");
+      if (dateInput) dateInput.focus();
+    });
+  });
+</script>
+
+ 
+
+
+
+  
 </body>
 </html>
