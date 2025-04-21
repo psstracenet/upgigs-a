@@ -1,0 +1,145 @@
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("✅ DOM loaded and admin.js running");
+
+  // 🚪 Logout handler
+  const logoutLink = document.getElementById("logout-link");
+  if (logoutLink) {
+    logoutLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      localStorage.removeItem("jwtToken");
+      window.location.href = "/";
+    });
+  }
+
+  // ❌ Cancel button removes the form
+  document.querySelectorAll(".cancel-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const form = btn.closest("form.gig-card");
+      if (form) {
+        form.classList.add("dismiss");
+        setTimeout(() => form.remove(), 300);
+      }
+    });
+  });
+
+  // 🎤 Artist Dropdown – Load selected artist's gigs securely
+  // 📂 public/js/admin.js
+
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("✅ DOM loaded and admin.js running");
+
+    // 🚪 Logout button handler
+    const logoutLink = document.getElementById("logout-link");
+    if (logoutLink) {
+      logoutLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("jwtToken");
+        window.location.href = "/";
+      });
+    }
+
+    // ❌ Cancel buttons: remove gig-card form smoothly
+    document.querySelectorAll(".cancel-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const form = btn.closest("form.gig-card");
+        if (form) {
+          form.classList.add("dismiss");
+          setTimeout(() => form.remove(), 300);
+        }
+      });
+    });
+
+    // 🎤 Artist dropdown: fetch new artist's data securely
+    const artistDropdown = document.getElementById("artist-switch");
+
+    if (artistDropdown) {
+      console.log("🎧 Found #artist-switch dropdown");
+
+      // Optional user interaction tracker (can be removed if not needed)
+      let userInitiated = false;
+
+      artistDropdown.addEventListener("mousedown", () => {
+        userInitiated = true;
+      });
+
+      artistDropdown.addEventListener("change", async () => {
+        const artist = artistDropdown.value;
+        console.log("🎯 Artist dropdown changed to:", artist); // 🔄 UPDATED
+        userInitiated = false;
+
+        try {
+          const response = await fetch(`/admin?artist=${artist}`, {
+            method: "GET",
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          });
+
+          const html = await response.text();
+          console.log(
+            "📦 Fetched partial /admin response. Length:",
+            html.length
+          ); // 🔄 UPDATED
+
+          console.log("📄 HTML from fetch:\n", html); // ✅ Show raw response
+
+          const tempDoc = new DOMParser().parseFromString(html, "text/html");
+          const updatedSection = tempDoc.getElementById("gig-section");
+
+          if (updatedSection) {
+            document.getElementById("gig-section").replaceWith(updatedSection);
+            console.log("✅ Gig section replaced for:", artist); // 🔄 UPDATED
+          } else {
+            console.warn("❌ #gig-section not found in partial HTML.");
+            showToast("⚠️ Could not load updated gigs");
+          }
+        } catch (err) {
+          console.error("❌ Error during artist switch fetch:", err); // 🔄 UPDATED
+          showToast("❌ Error switching artist.");
+        }
+      });
+      function attachArtistDropdownListener() {
+        const artistDropdown = document.getElementById("artist-switch");
+
+        if (!artistDropdown) {
+          console.warn("⚠️ #artist-switch not found when attaching listener.");
+          return;
+        }
+
+        // Clear old listeners by cloning the element (optional safety)
+        const clone = artistDropdown.cloneNode(true);
+        artistDropdown.parentNode.replaceChild(clone, artistDropdown);
+
+        clone.addEventListener("change", async () => {
+          const artist = clone.value;
+          console.log("🎯 Artist dropdown changed to:", artist);
+
+          try {
+            const response = await fetch(`/admin?artist=${artist}`, {
+              method: "GET",
+              headers: {
+                "X-Requested-With": "XMLHttpRequest",
+              },
+            });
+
+            const html = await response.text();
+            const tempDoc = new DOMParser().parseFromString(html, "text/html");
+            const updatedSection = tempDoc.getElementById("gig-section");
+
+            if (updatedSection) {
+              document
+                .getElementById("gig-section")
+                .replaceWith(updatedSection);
+              console.log("✅ Gig section updated for:", artist);
+              attachArtistDropdownListener(); // ✅ Reattach after replacing content
+            } else {
+              console.warn("❌ #gig-section not found in response.");
+            }
+          } catch (err) {
+            console.error("❌ Error switching artist:", err);
+          }
+        });
+      }
+    }
+  });
+});

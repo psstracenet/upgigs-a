@@ -3,25 +3,73 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Upcoming Gigs | UpGigs</title>
+    <title>UpGigs | Login</title>
     <link rel="stylesheet" href="/css/upgigs.css" />
   </head>
   <body>
-    <div class="container">
-      <h1>Upcoming Gigs</h1>
+    <h1>🎸 UpGigs</h1>
+    <div class="tagline">Manage your band’s shows, the smart way.</div>
 
-      <% if (gigs && gigs.length > 0) { %> <% gigs.forEach(gig => { %>
-      <div class="gig-card">
-        <div class="gig-date"><strong><%= gig.date %></strong></div>
-        <div class="gig-venue"><%= gig.venue %></div>
-        <div class="gig-city"><%= gig.city %></div>
-        <% if (gig.time) { %>
-        <div class="time">Start Time: <%= gig.time %></div>
-        <% } %>
-      </div>
-      <% }) %> <% } else { %>
-      <p>No gigs scheduled.</p>
-      <% } %>
+    <!-- Login Form -->
+    <div class="login-container">
+      <h2>Login</h2>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Username:</label>
+          <input type="text" id="username" name="username" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Password:</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            autocomplete="current-password"
+          />
+        </div>
+        <button type="submit" class="btn-login">Login</button>
+      </form>
     </div>
+
+    <!--  Main Content -->
+    <div id="main-content"></div>
+
+    <!-- JavaScript for handling login form submission -->
+    <script nonce="<%= nonce %>">
+      document
+        .getElementById("login-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const username = document.getElementById("username").value;
+          const password = document.getElementById("password").value;
+
+          try {
+            const response = await fetch("/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username, password }),
+            });
+
+            if (!response.ok) {
+              alert("Invalid credentials!");
+              return;
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+              // ✅ Cookie set — just redirect
+              window.location.href = "/admin";
+            } else {
+              alert("Login failed. Please try again.");
+            }
+          } catch (err) {
+            console.error("Login error:", err);
+            alert("Unexpected error occurred.");
+          }
+        });
+    </script>
   </body>
 </html>

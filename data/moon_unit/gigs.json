@@ -5,6 +5,18 @@
       "venue": "Barnies",
       "city": "Morganton",
       "time": "8pm"
+    },
+    {
+      "date": "2025-04-20",
+      "venue": "Lids",
+      "city": "Morganton",
+      "time": "9pm"
+    },
+    {
+      "date": "2025-07-22",
+      "venue": "Barnies",
+      "city": "Morganton",
+      "time": "8pm"
     }
   ]
 }

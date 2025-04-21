@@ -1,16 +1,28 @@
 {
   "gigs": [
     {
-      "date": "2025-07-05",
-      "venue": "Melonaid",
-      "city": "Hickory",
+      "date": "2025-07-22",
+      "venue": "Barnies",
+      "city": "Morganton",
+      "time": "8pm"
+    },
+    {
+      "date": "2025-04-20",
+      "venue": "Lids",
+      "city": "Morganton",
       "time": "9pm"
     },
     {
-      "date": "2025-07-09",
-      "venue": "Varukas",
-      "city": "Hickory",
+      "date": "2025-04-20",
+      "venue": "Lids",
+      "city": "Morganton",
       "time": "9pm"
+    },
+    {
+      "date": "2025-07-22",
+      "venue": "Barnies",
+      "city": "Morganton",
+      "time": "8pm"
     }
   ]
 }

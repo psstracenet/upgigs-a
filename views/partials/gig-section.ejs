@@ -1,0 +1,34 @@
+<div id="gig-section">
+  <hr style="margin: 3rem 0" />
+  <h2>Current Gigs for <%= selected.replace('_', ' ') %></h2>
+
+  <% if (gigs.length > 0) { %> <% gigs.forEach((gig, index) => { %>
+  <div class="gig-card">
+    <form
+      class="delete-gig-form"
+      style="float: right"
+      data-index="<%= index %>"
+      data-artist="<%= selected %>"
+    >
+      <button
+        type="submit"
+        style="
+          background: none;
+          border: none;
+          color: var(--accent);
+          font-weight: bold;
+          cursor: pointer;
+        "
+      >
+        🗑 Delete
+      </button>
+    </form>
+    <strong><%= gig.date %></strong> – <%= gig.venue %>, <%= gig.city %> <% if
+    (gig.time) { %>
+    <div class="time">Time: <%= gig.time %></div>
+    <% } %>
+  </div>
+  <% }) %> <% } else { %>
+  <p>No gigs listed yet.</p>
+  <% } %>
+</div>

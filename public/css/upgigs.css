@@ -18,21 +18,64 @@
   --accent: var(--green-600);
 }
 
-/* Layout Base */
+/* Reset & Base Layout */
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
   background: var(--background);
   color: var(--foreground);
   font-family: system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  text-align: center;
   padding: 2rem;
-  margin: 0;
-  line-height: 1.6;
+  overflow-y: auto;
+}
+
+/* Glow Background */
+.glow-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    var(--blue-300) 0%,
+    transparent 60%
+  );
+  opacity: 0.05;
+  animation: shimmer 15s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
 }
 
 /* Headings */
 h1 {
+  font-size: 3rem;
   text-align: center;
-  font-size: 2.5rem;
-  margin-bottom: 2rem;
+  color: var(--accent);
+  text-shadow: 0 0 12px var(--accent);
+  margin-bottom: 0.5rem;
 }
 
 h2 {
@@ -42,15 +85,68 @@ h2 {
   margin-bottom: 1rem;
 }
 
+.tagline {
+  color: var(--gray-400);
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
 label {
   color: var(--accent);
 }
 
-textarea {
-  background-color: var(--gray-100);
+/* Container */
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 5rem;
+}
+
+/* Login Grid */
+.login-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+  max-width: 800px;
+  width: 100%;
+}
+
+.login-card {
+  background: var(--gray-100);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  color: var(--green-600);
-  padding: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 0 10px var(--gray-50);
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.login-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 14px var(--blue-300);
+}
+
+.band-name {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  color: var(--accent);
+}
+
+.btn-login {
+  background: var(--accent);
+  color: var(--background);
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.btn-login:hover {
+  box-shadow: 0 0 10px var(--accent);
 }
 
 /* Gig Card */
@@ -59,7 +155,6 @@ textarea {
   color: var(--foreground);
   padding: 1rem 1.5rem;
   margin: 1rem 0;
-  /* border-left: 4px solid var(--border); */
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 0 10px var(--gray-100);
@@ -90,35 +185,11 @@ textarea {
   outline: none;
 }
 
-@keyframes slideFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.gig-card.animate-in {
-  animation: slideFadeIn 0.4s ease-out;
-}
-
-/* Time or Subtext */
 .time {
   font-size: 0.9rem;
   color: var(--gray-400);
 }
 
-/* Container (optional if using wrapper divs) */
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-/* Buttons  */
 .btn-accent {
   background: var(--gray-50);
   color: var(--accent);
@@ -154,12 +225,52 @@ textarea {
   display: none;
 }
 
+.toast {
+  background: var(--gray-100);
+  color: var(--accent);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  animation: fadeInOut 5s forwards;
+  z-index: 1000;
+  position: sticky;
+  top: 1rem;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    display: none;
+  }
+}
+
+@keyframes slideFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -172,6 +283,10 @@ textarea {
     opacity: 0;
     transform: translateY(10px);
   }
+}
+
+.gig-card.animate-in {
+  animation: slideFadeIn 0.4s ease-out;
 }
 
 .gig-card.dismiss {
@@ -190,28 +305,8 @@ textarea {
   font-size: 1rem;
 }
 
-.toast {
-  background: var(--gray-100);
-  color: var(--accent); /* <-- accent text color only */
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border-left: 4px solid var(--accent);
-  border-radius: 6px;
-  animation: fadeInOut 5s forwards;
-}
-
-@keyframes fadeInOut {
-  0% {
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    display: none;
-  }
+/* Optional: fade-out animation */
+.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
 }

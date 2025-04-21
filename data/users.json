@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "username": "jon",
+      "password": "demo",          
+      "artist": "metro_jethros",
+      "slug": "metro-jethros",
+      "role": "user",
+      "displayName": "Metro Jethros"
+    },
+    {
+      "username": "admin",
+      "password": "admin",
+      "artist": "mellow_swells",      
+      "slug": "mellow-swells",
+      "role": "admin",
+      "displayName": "Mellow Swells"
+    },
+    {
+      "username": "luna",
+      "password": "moon123",
+      "artist": "moon_unit",
+      "slug": "moon-unit",
+      "role": "admin",
+      "displayName": "Moon Unit"
+    }
+  ]
+}

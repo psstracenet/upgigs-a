@@ -4,26 +4,34 @@ import { fileURLToPath } from "url";
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
 import dotenv from "dotenv";
-
+import jwt from "jsonwebtoken";
+import fs from "fs";
 import Imap from "imap";
 import { simpleParser } from "mailparser";
 import fetch from "node-fetch";
+import cors from "cors";
+import util from "util";
+import crypto from "crypto";
+import cookieParser from "cookie-parser";
 
 // Load env vars
 dotenv.config();
 
-// Setup ESM __dirname
+// ── paths & env ──────────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8081;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
-const SECRET_TOKEN = process.env.SECRET_TOKEN || "gigs2025tokenX107";
+const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY || "hello123hello123";
 
-const userTokens = {
-  gigs2025tokenX107: { artist: "metro_jethros", role: "admin" },
-  jon2025token: { artist: "metro_jethros", role: "user" },
-};
+// ── load users from JSON file ────────────────────────────────────────────────
+const usersRaw = fs.readFileSync(
+  path.join(__dirname, "data", "users.json"),
+  "utf8"
+);
+//  ➜  users is the *array* we’ll search in /login
+const users = JSON.parse(usersRaw).users;
 
 // Setup Express
 const app = express();
@@ -32,9 +40,42 @@ app.set("views", path.join(__dirname, "views"));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-import fs from "fs";
-import util from "util";
+// CSP (Content-Security-Policy)
+
+app.use((req, res, next) => {
+  const nonce = crypto.randomBytes(16).toString("base64");
+  res.locals.nonce = nonce;
+  res.setHeader(
+    "Content-Security-Policy",
+    `
+    default-src 'self' 'nonce-${nonce}';
+    script-src 'self' 'nonce-${nonce}';   
+    style-src 'self' 'unsafe-inline';      
+    connect-src 'self' http://localhost:8081; 
+    img-src 'self' data:;                  
+    font-src 'self';                      
+    object-src 'none';                     
+    base-uri 'self';                      
+    form-action 'self';                   
+    frame-ancestors 'none';               
+    `
+      .replace(/\s{2,}/g, " ")
+      .trim()
+  );
+  next();
+});
+
+// Cross-Origin Resource Sharing)
+// app.use(
+//   cors({
+//     origin: "http://localhost:8080", // Origin is local website (metrojethros)
+//   })
+// );
+
+app.use(cors());
+
 const appendLog = util.promisify(fs.appendFile);
 const logFile = path.join(__dirname, "logs", "parser.log");
 
@@ -61,86 +102,319 @@ await dbArtist.read();
 
 // Helper Functions
 
-function renderAdmin(res, artist, gigs, extra = {}) {
+function renderAdmin(
+  res,
+  {
+    username,
+    role,
+    artist,
+    gigs,
+    restoredGig = null,
+    savedGig = null,
+    deletedGig = null,
+    parsedGig = null,
+    parsedEmailGig = null,
+    errorMessage = null,
+    nonce,
+  }
+) {
   res.render("admin", {
-    artists: ["metro_jethros", "mellow_swells", "moon_unit"],
+    nonce,
+    username,
+    role,
+    artists: users.map((u) => ({
+      artist: u.artist,
+      displayName: u.displayName || u.artist.replace("_", " "),
+    })),
     selected: artist,
     gigs,
-    parsedGig: null,
-    parsedEmailGig: null,
-    savedGig: null,
-    deletedGig: null,
-    restoredGig: null,
-    errorMessage: null,
-    ...extra,
+    parsedGig,
+    parsedEmailGig,
+    savedGig,
+    deletedGig,
+    restoredGig,
+    errorMessage,
   });
 }
 
-// Route: homepage with EJS rendering
-app.get("/", (req, res) => {
-  res.render("landing");
+const authenticateJWT = (req, res, next) => {
+  const token = req.cookies.token; // ✅ Now from cookie
+
+  if (!token) {
+    return res.status(403).json({ message: "Access token required" });
+  }
+
+  jwt.verify(token, JWT_SECRET_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ message: "Invalid or expired token" });
+    }
+
+    req.user = decoded; // Attach user data to request
+    next();
+  });
+};
+
+// // Example of protected route
+// app.get("/api/protected-data", authenticateJWT, (req, res) => {
+//   res.json({ message: "This is protected data" });
+// });
+
+app.get("/api/get-events", (req, res) => {
+  const { token } = req.query;
+  console.log("Received token:", token); // Log the token to ensure it's coming through correctly
+
+  try {
+    // Fetch events based on the token
+    const events = getEventsByToken(token); // Ensure this returns an array
+
+    // Log the fetched events to verify
+    console.log("Fetched events from server:", events);
+
+    // Ensure the events variable is an array
+    if (!Array.isArray(events)) {
+      console.error("Returned events is not an array!"); // Log an error if it's not an array
+      return res
+        .status(500)
+        .json({ error: "Internal Server Error - events is not an array" });
+    }
+
+    // Check if no events were found
+    if (events.length === 0) {
+      console.error("No events found for token:", token); // Log if no events are found for the token
+      return res.status(404).json({ error: "No events found" });
+    }
+
+    // Send the events data as a response
+    res.json({ events });
+  } catch (error) {
+    // Catch any errors during the process
+    console.error("Error fetching events:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
-// Route: Admin
-app.get(["/admin", "/:slug/admin"], async (req, res) => {
-  const token = req.query.token;
-  const user = userTokens[token];
-  if (!user) return res.status(403).send("Invalid token");
+// Function to fetch events by token from gigs.json
+function getEventsByToken(token) {
+  console.log("Checking events for token:", token);
 
-  const slug = req.params.slug;
-  const selected = slug ? slug.replace(/-/g, "_") : user.artist;
-  if (user.artist !== selected)
-    return res.status(403).send("Token does not match artist");
+  // Define the file path for the gigs.json file
+  const filePath = path.join(__dirname, "data", "metro_jethros", "gigs.json");
 
-  const filePath = path.join(__dirname, "data", selected, "gigs.json");
+  // Try reading the gigs.json file
+  try {
+    const data = fs.readFileSync(filePath, "utf8"); // Read file synchronously
+    const jsonData = JSON.parse(data); // Parse the JSON data
+    const events = jsonData.gigs; // Access the 'gigs' array
+
+    if (token === "jon2025token") {
+      return events; // Return all events if token matches
+    } else {
+      return []; // Return empty array for other tokens (can be changed as needed)
+    }
+  } catch (error) {
+    console.error("Error reading gigs.json:", error);
+    return []; // Return an empty array if there's an error reading the file
+  }
+}
+
+// app.listen(8080, () => {
+//   console.log("UpGigs API running on http://localhost:8081");
+// });
+
+app.listen(PORT, () => {
+  console.log(`UpGigs API running on http://localhost:${PORT}`);
+});
+
+app.get("/favicon.ico", (req, res) => res.status(204).end());
+
+// Route: homepage with EJS rendering
+app.get("/", (req, res) => {
+  res.render("index", {
+    users, // ← the users array you loaded at startup
+    gigs: [], // (optional) preload gigs here if you want
+  });
+});
+
+// Logout
+// function logout() {
+//   localStorage.removeItem("jwtToken");
+//   window.location.href = "/";
+// }
+
+// Route: Login
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+
+  const user = users.find((u) => u.username === username);
+  if (!user || password !== user.password) {
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  const token = jwt.sign(
+    { username: user.username, role: user.role, artist: user.artist },
+    JWT_SECRET_KEY,
+    { expiresIn: "1h" }
+  );
+
+  // ✅ Set secure cookie
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 1000,
+  });
+
+  res.json({ success: true });
+});
+
+// Route: MyGigs
+app.get("/my-gigs", authenticateJWT, async (req, res) => {
+  if (!req.user) {
+    return res.status(403).json({ error: "User not found in token" });
+  }
+
+  const { artist, role, username } = req.user;
+  const filePath = path.join(__dirname, "data", artist, "gigs.json");
 
   try {
     const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
     await dbArtist.read();
 
-    // 🔐 Log access
-    const logEntry = `[${new Date().toISOString()}] ${token} accessed ${selected} as ${
-      user.role
-    }\n`;
-    fs.appendFileSync(path.join(__dirname, "logs", "access.log"), logEntry);
+    res.render("my-gigs", {
+      username,
+      role,
+      artist,
+      gigs: dbArtist.data.gigs,
+      errorMessage: null, // ✅ define it here
+    });
+  } catch (err) {
+    console.error("⚠️ Failed to load gigs:", err);
 
-    const restoredGigFlag = req.query.restored;
-    const deletedGigFlag = req.query.deleted;
+    res.render("my-gigs", {
+      username,
+      role,
+      artist,
+      gigs: [],
+      errorMessage: "Could not load gigs.", // ✅ define here too
+    });
+  }
+});
+// // Route: Redirect
+// app.get("/redirect", (req, res) => {
+//   const nonce = res.locals.nonce || "";
+//   res.send(`
+//     <!DOCTYPE html>
+//     <html>
+//       <head><title>Redirecting...</title></head>
+//       <body>
+//         <script nonce="${nonce}">
+//   const token = localStorage.getItem("jwtToken");
+//   if (!token) {
+//     alert("No token found.");
+//     window.location.href = "/";
+//   } else {
+//     // ✅ Use real browser redirect — no fetch, no DOM rewrite
+//     window.location.href = "/admin";
+//   }
+// </script>
 
-    renderAdmin(res, selected, dbArtist.data.gigs, {
-      role: user.role,
-      restoredGig: restoredGigFlag ? { date: "Restored" } : null,
-      deletedGig: deletedGigFlag ? { date: "Deleted" } : null,
+//       </body>
+//     </html>
+//   `);
+// });
+
+// Function to get user data by username
+function getUserByUsername(username) {
+  return users.find((user) => user.username === username);
+}
+
+// Route: Admin - Secure with JWT
+app.get("/admin", authenticateJWT, async (req, res) => {
+  const { artist: userArtist, role, username } = req.user;
+  const selected = req.query.artist || userArtist;
+
+  console.log("🧠 Requested artist:", selected);
+
+  const filePath = path.join(__dirname, "data", selected, "gigs.json");
+
+  const restoredGig = req.query.restoredGig
+    ? JSON.parse(decodeURIComponent(req.query.restoredGig))
+    : null;
+
+  try {
+    const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
+    await dbArtist.read();
+
+    const gigs = dbArtist.data.gigs;
+
+    // ✅ PARTIAL RESPONSE: only send gig-section if requested via JS fetch
+    if (req.headers["x-requested-with"] === "XMLHttpRequest") {
+      return res.render("partials/gig-section", { selected, gigs });
+    }
+
+    console.log("🧪 Accept header:", req.headers.accept);
+
+    // ✅ FULL PAGE RESPONSE
+    res.render("admin", {
+      nonce: res.locals.nonce,
+      username,
+      role,
+      artists: users.map((u) => ({
+        artist: u.artist,
+        displayName: u.displayName || u.artist.replace("_", " "),
+      })),
+      selected,
+      gigs,
+      parsedGig: null,
+      parsedEmailGig: null,
+      savedGig: null,
+      deletedGig: null,
+      restoredGig,
+      errorMessage: null,
     });
   } catch (err) {
     console.error("⚠️ Admin load error:", err);
-    renderAdmin(res, selected, [], {
-      role: user.role,
+
+    res.render("admin", {
+      nonce: res.locals.nonce,
+      username,
+      role,
+      artists: users.map((u) => ({
+        artist: u.artist,
+        displayName: u.displayName || u.artist.replace("_", " "),
+      })),
+      selected,
+      gigs: [],
+      parsedGig: null,
+      parsedEmailGig: null,
+      savedGig: null,
+      deletedGig: null,
+      restoredGig: null,
       errorMessage: "Failed to load gigs.",
     });
   }
 });
 
 // Route: Parse Gig
-app.post("/parse-gig", async (req, res) => {
-  const { token, artist, message } = req.body;
+app.post("/parse-gig", authenticateJWT, async (req, res) => {
+  console.log("Authorization Header:", req.headers["authorization"]);
+  const { artist, message } = req.body;
 
-  if (token !== process.env.SECRET_TOKEN) {
-    return res.status(403).send("Forbidden");
-  }
+  // Destructure the user information from the JWT
+  const { role, username } = req.user;
 
-  const user = userTokens[token];
-  const role = user?.role || "user";
-
+  // Ensure that both artist and message are provided
   if (!artist || !message) {
     return res.status(400).send("Missing artist or message");
   }
 
+  // Determine the file path for the artist's gigs data
   const filePath = path.join(__dirname, "data", artist, "gigs.json");
   const adapter = new JSONFile(filePath);
   const dbArtist = new Low(adapter, { gigs: [] });
   await dbArtist.read();
 
+  // System prompt for the AI model
   const systemPrompt = `
 Extract a structured gig from this message. Return JSON with:
 "date", "venue", "city", and "time" if available.
@@ -149,14 +423,17 @@ Only return a JSON object.
 `;
 
   try {
+    console.log("Authorization Header:", req.headers["authorization"]);
+
+    // Send request to OpenAI API for parsing the gig message
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, // Use your OpenAI API key here
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: "gpt-3.5-turbo", // or gpt-4 if preferred
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: message },
@@ -166,38 +443,51 @@ Only return a JSON object.
     });
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const raw = data.choices[0]?.message?.content.trim();
 
-    let parsedGig = null;
+    // Parse the AI response
+    let parsed;
     try {
-      parsedGig = JSON.parse(content);
+      parsed = JSON.parse(raw);
     } catch (err) {
-      parsedGig = { error: "Failed to parse JSON from AI", raw: content };
+      console.warn("❌ Invalid JSON from AI:", raw);
+      return res.status(500).json({ error: "Invalid JSON from AI" });
     }
 
-    await logParserResult("parse-gig", message, parsedGig || content);
+    // Attach the final date and validate the parsed data
+    parsed.date = new Date().toISOString().slice(0, 10);
 
-    const role = userTokens[token]?.role || "user";
-    renderAdmin(res, artist, dbArtist.data.gigs, { parsedGig, role });
+    if (!parsed.venue || !parsed.city || !parsed.time) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    // Save the parsed gig data to the database
+    dbArtist.data.gigs.push(parsed);
+    await dbArtist.write();
+
+    // Return the parsed gig data as response
+    res.json({ gig: parsed });
   } catch (err) {
-    console.error("❌ Error parsing gig:", err);
-    renderAdmin(res, artist, dbArtist.data.gigs, {
-      errorMessage: "Gig parsing failed. Please check your input or try again.",
-      role,
+    console.error("❌ OpenAI request failed:", err.message || err);
+    return res.status(502).json({
+      status: "error",
+      code: 502,
+      message: "AI backend failed to respond",
     });
   }
 });
 
 // Route: Test Email
-app.post("/test-email", async (req, res) => {
-  const { token, artist, emailBody } = req.body;
+app.post("/test-email", authenticateJWT, async (req, res) => {
+  const { artist, emailBody } = req.body;
 
-  if (token !== process.env.SECRET_TOKEN) {
-    return res.status(403).send("Forbidden");
+  // Destructure role and username from req.user (from JWT)
+  const { role, username } = req.user;
+
+  // Check if artist and emailBody are provided
+  if (!artist || !emailBody) {
+    return res.status(400).send("Missing artist or email body");
   }
-
-  const user = userTokens[token];
-  const role = user?.role || "user";
 
   const filePath = path.join(__dirname, "data", artist, "gigs.json");
   const adapter = new JSONFile(filePath);
@@ -238,7 +528,10 @@ Only return JSON.
       parsedEmailGig = { error: "Could not parse AI response", raw: content };
     }
 
+    // Log the parsed email gig result
     await logParserResult("test-email", emailBody, parsedEmailGig || content);
+
+    // Render the admin page with the parsed email gig result
     renderAdmin(res, artist, dbArtist.data.gigs, { parsedEmailGig });
   } catch (err) {
     console.error("❌ Email test error:", err);
@@ -249,68 +542,123 @@ Only return JSON.
 });
 
 // Route: Save Gig
-app.post("/save-gig", async (req, res) => {
-  const { token, artist, date, venue, city, time } = req.body;
-  if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+app.post("/save-gig", authenticateJWT, async (req, res) => {
+  // Destructure role and username from req.user (from JWT)
+  const { role, username } = req.user;
 
-  const user = userTokens[token];
-  const role = user?.role || "user";
+  const { artist, date, venue, city, time } = req.body;
 
+  // Validate the required fields
+  if (!artist || !date || !venue || !city) {
+    return res.status(400).json({
+      error: "Missing required fields: artist, date, venue, or city.",
+    });
+  }
+
+  // Create the new gig object
   const newGig = { date, venue, city };
   if (time) newGig.time = time;
 
   const filePath = path.join(__dirname, "data", artist, "gigs.json");
-  const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
-  await dbArtist.read();
+  const adapter = new JSONFile(filePath);
+  const dbArtist = new Low(adapter, { gigs: [] });
 
-  dbArtist.data.gigs.push(newGig);
-  await dbArtist.write();
+  try {
+    await dbArtist.read(); // Read the database
 
-  renderAdmin(res, artist, dbArtist.data.gigs, { savedGig: newGig, role });
+    // Add the new gig to the gigs array
+    dbArtist.data.gigs.push(newGig);
+    await dbArtist.write(); // Write the new data back to the database
+
+    // Render the admin page with the new gig saved
+    renderAdmin(res, artist, dbArtist.data.gigs, { savedGig: newGig, role });
+  } catch (err) {
+    console.error("❌ Error saving gig:", err);
+    return res.status(500).json({ error: "Failed to save gig" });
+  }
 });
 
 // Route: Delete Gig
-app.post("/delete-gig", async (req, res) => {
-  const { token, artist, index } = req.body;
-  if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+app.post("/delete-gig", authenticateJWT, async (req, res) => {
+  // Destructure role and username from req.user (from JWT)
+  const { role, username } = req.user;
 
-  const user = userTokens[token];
-  const role = user?.role || "user";
+  const { artist, index } = req.body;
+
+  // Validate the required fields
+  if (!artist || index === undefined) {
+    return res
+      .status(400)
+      .json({ error: "Missing required fields: artist or index." });
+  }
 
   const filePath = path.join(__dirname, "data", artist, "gigs.json");
-  const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
-  await dbArtist.read();
+  const adapter = new JSONFile(filePath);
+  const dbArtist = new Low(adapter, { gigs: [] });
 
-  const i = parseInt(index, 10);
-  const deletedGig = dbArtist.data.gigs.splice(i, 1);
-  await dbArtist.write();
+  try {
+    await dbArtist.read(); // Read the database
 
-  res.redirect(`/admin?token=${token}&artist=${artist}&deleted=1`);
+    const i = parseInt(index, 10); // Parse the index to an integer
+    if (i < 0 || i >= dbArtist.data.gigs.length) {
+      return res.status(400).json({ error: "Invalid gig index" });
+    }
+
+    const deletedGig = dbArtist.data.gigs.splice(i, 1); // Remove the gig at the given index
+    await dbArtist.write(); // Write the updated data back to the database
+
+    // Render the admin page with the gig deleted message
+
+    res.json({ deleted: deletedGig[0] });
+  } catch (err) {
+    console.error("❌ Error deleting gig:", err);
+    return res.status(500).json({ error: "Failed to delete gig" });
+  }
 });
 
 // Route: Undo Delete
-app.post("/undo-delete", async (req, res) => {
-  const { token, artist, gig } = req.body;
-  if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+app.post("/undo-delete", authenticateJWT, async (req, res) => {
+  const { role, username } = req.user;
+  const { artist, gig } = req.body;
 
-  const user = userTokens[token];
-  const role = user?.role || "user";
+  if (!artist || !gig) {
+    return res
+      .status(400)
+      .json({ error: "Missing required fields: artist or gig." });
+  }
 
   let restoredGig;
   try {
-    restoredGig = JSON.parse(gig);
+    restoredGig = typeof gig === "string" ? JSON.parse(gig) : gig;
   } catch {
     return res.status(400).send("Invalid gig format");
   }
 
   const filePath = path.join(__dirname, "data", artist, "gigs.json");
   const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
-  await dbArtist.read();
 
-  dbArtist.data.gigs.push(restoredGig);
-  await dbArtist.write();
+  console.log("🎯 Undo request payload:", { artist, gig });
 
-  res.redirect(`/admin?token=${token}&artist=${artist}&restored=1`);
+  try {
+    await dbArtist.read();
+    dbArtist.data.gigs.push(restoredGig);
+    await dbArtist.write();
+
+    // ✅ Use updated renderAdmin with full object structure
+    renderAdmin(res, {
+      username,
+      role,
+      artist,
+      gigs: dbArtist.data.gigs,
+      restoredGig,
+      nonce: res.locals.nonce,
+    });
+  } catch (err) {
+    console.error("❌ Error restoring gig:", err);
+    return res
+      .status(500)
+      .json({ error: "Failed to restore gig", details: err.message });
+  }
 });
 
 // Route: Artists
@@ -346,11 +694,11 @@ import { resolve } from "path/win32";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Route: Add gig from AI/email or form
-app.post("/api/parse-and-add", async (req, res) => {
-  const auth = req.headers.authorization;
-  if (!auth || auth !== `Bearer ${SECRET_TOKEN}`) {
-    return res.status(403).json({ error: "Forbidden: Invalid token" });
-  }
+
+app.post("/api/parse-and-add", authenticateJWT, async (req, res) => {
+  console.log("JWT Token in request:", localStorage.getItem("jwtToken"));
+  console.log("req.user:", req.user); // Check if req.user is set
+  const { role, username } = req.user; // Get user info from JWT
 
   const message = req.body.message;
   if (!message) return res.status(400).json({ error: "Missing message" });
@@ -393,20 +741,20 @@ app.post("/api/parse-and-add", async (req, res) => {
         {
           role: "system",
           content: `
-  You will receive a gig message. The date has already been extracted.
-  
-  Your job is to return only valid JSON with the following fields:
-  - "venue"
-  - "city"
-  - "time" (like "8:00 PM", or "TBD" if unknown)
-  
-  Never guess or invent values. Respond with JSON only, no explanation.
-  Example:
-  {
-    "venue": "The Pour House",
-    "city": "Raleigh",
-    "time": "9:00 PM"
-  }
+You will receive a gig message. The date has already been extracted.
+
+Your job is to return only valid JSON with the following fields:
+- "venue"
+- "city"
+- "time" (like "8:00 PM", or "TBD" if unknown)
+
+Never guess or invent values. Respond with JSON only, no explanation.
+Example:
+{
+  "venue": "The Pour House",
+  "city": "Raleigh",
+  "time": "9:00 PM"
+}
           `.trim(),
         },
         {
@@ -500,19 +848,33 @@ function checkMail() {
               console.log("📩 Email body:", emailText);
 
               try {
-                const res = await fetch(`${BASE_URL}/api/parse-and-add`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${SECRET_TOKEN}`,
-                  },
-                  body: JSON.stringify({ message: emailText }),
-                });
+                const { role, username } = req.user; // Destructuring 'role' and 'username' from req.user
 
-                const result = await res.json();
-                console.log("✅ Gig added from email:", result);
+                // Get the JWT token from localStorage (assuming it's already set there during login)
+                const token = localStorage.getItem("jwtToken"); // Retrieve token from localStorage
+                console.log("Retrieved Token for Parse with AI:", token);
+                // Ensure that the token exists
+                if (!token) {
+                  throw new Error("Token not found.");
+                }
+
+                // Now, using the correct token in the Authorization header
+                // const res = await fetch(`${BASE_URL}/api/parse-and-add`, {
+                const res = await fetch(
+                  `http://localhost:8081/api/parse-and-add`,
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`, // Correctly passing the token here
+                    },
+                    body: JSON.stringify({ message: emailText }),
+                  }
+                );
+
+                // Further code remains the same...
               } catch (err) {
-                console.error("❌ API post failed:", err.message);
+                console.error("Error occurred:", err);
               }
             });
           });
@@ -543,10 +905,13 @@ function checkMail() {
   imap.connect();
 }
 
-// View parser logs
-app.get("/admin/logs", async (req, res) => {
-  const token = req.query.token;
-  if (token !== SECRET_TOKEN) return res.status(403).send("Forbidden");
+// Route: View parser logs
+app.get("/admin/logs", authenticateJWT, async (req, res) => {
+  const user = req.user; // Extract user info from the JWT token
+
+  if (!user || user.role !== "admin") {
+    return res.status(403).send("Forbidden: Access denied");
+  }
 
   try {
     const logs = fs.readFileSync(logFile, "utf-8");

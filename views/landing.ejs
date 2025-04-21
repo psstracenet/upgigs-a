@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Welcome to UpGigs</title>
+    <title>UpGigs – Login</title>
     <link rel="stylesheet" href="/css/upgigs.css" />
     <style>
       body {
@@ -13,85 +13,93 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
+        padding: 4rem 2rem;
         min-height: 100vh;
-        margin: 0;
-        padding: 2rem;
-        overflow: hidden;
         text-align: center;
-        position: relative;
       }
 
-      .brand {
-        font-size: 3.5rem;
+      h1 {
+        font-size: 2.8rem;
+        margin-bottom: 1rem;
         color: var(--accent);
-        font-weight: 800;
-        margin-bottom: 0.5rem;
-        text-shadow: 0 0 12px var(--accent);
+        text-shadow: 0 0 8px var(--accent);
       }
 
-      .tagline {
-        font-size: 1.2rem;
-        color: var(--gray-400);
-        margin-bottom: 3rem;
+      .login-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        max-width: 700px;
+        width: 100%;
+        margin-top: 2rem;
       }
 
-      .btn-main {
-        background: var(--accent);
-        color: var(--background);
-        padding: 0.9rem 2rem;
-        border-radius: 8px;
+      .login-card {
+        background: var(--gray-100);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 0 10px var(--gray-50);
+        transition: transform 0.2s ease;
+      }
+
+      .login-card:hover {
+        transform: scale(1.02);
+        box-shadow: 0 0 15px var(--blue-300);
+      }
+
+      .band-name {
         font-size: 1.2rem;
         font-weight: bold;
+        margin-bottom: 1rem;
+        color: var(--accent);
+      }
+
+      .btn-login {
+        background: var(--accent);
+        color: var(--background);
+        padding: 0.5rem 1.2rem;
         border: none;
+        border-radius: 6px;
+        font-weight: bold;
         cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        font-size: 1rem;
       }
 
-      .btn-main:hover {
-        transform: scale(1.05);
-        box-shadow: 0 0 20px var(--accent);
-      }
-
-      .glow-bg {
-        position: absolute;
-        width: 200%;
-        height: 200%;
-        top: -50%;
-        left: -50%;
-        background: radial-gradient(
-          circle at center,
-          var(--blue-300) 0%,
-          transparent 70%
-        );
-        opacity: 0.05;
-        animation: shimmer 15s linear infinite;
-        z-index: -1;
-      }
-
-      @keyframes shimmer {
-        0% {
-          transform: rotate(0deg) scale(1);
-        }
-        50% {
-          transform: rotate(180deg) scale(1.2);
-        }
-        100% {
-          transform: rotate(360deg) scale(1);
-        }
+      .btn-login:hover {
+        box-shadow: 0 0 12px var(--accent);
       }
     </style>
   </head>
   <body>
-    <div class="glow-bg"></div>
+    <h1>🎸 UpGigs Login</h1>
+    <p>Select your band to manage your gigs:</p>
 
-    <div class="brand">🎸 UpGigs</div>
-    <div class="tagline">
-      Local shows, smartly managed. No spreadsheets required.
+    <div class="login-grid">
+      <!-- Jon -->
+      <div class="login-card">
+        <div class="band-name">Metro Jethros</div>
+        <a href="/metro-jethros/admin?token=jon2025token">
+          <button class="btn-login">Login</button>
+        </a>
+      </div>
+
+      <!-- Amy or other band -->
+      <div class="login-card">
+        <div class="band-name">Mellow Swells</div>
+        <a href="/mellow-swells/admin?token=gigs2025tokenX107">
+          <button class="btn-login">Login</button>
+        </a>
+      </div>
+
+      <!-- Another band -->
+      <div class="login-card">
+        <div class="band-name">Moon Unit</div>
+        <a href="/moon-unit/admin?token=gigs2025tokenX107">
+          <button class="btn-login">Login</button>
+        </a>
+      </div>
     </div>
-
-    <a href="/metro-jethros/admin?token=jon2025token">
-      <button class="btn-main">🎛 Enter Admin</button>
-    </a>
   </body>
 </html>

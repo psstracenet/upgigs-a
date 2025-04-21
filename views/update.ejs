@@ -64,7 +64,7 @@
       <div id="result"></div>
     </form>
 
-    <script>
+    <script nonce="<%= nonce %>">
       document
         .getElementById("update-form")
         .addEventListener("submit", async (e) => {
@@ -75,26 +75,29 @@
           resultBox.innerText = "⏳ Sending to AI...";
 
           try {
-            const res = await fetch("/api/parse-and-add", {
+            const { role, username } = req.user; // Destructuring 'role' and 'username' from req.user
+
+            // Get the JWT token from localStorage (assuming it's already set there during login)
+            const token = localStorage.getItem("jwtToken"); // Retrieve token from localStorage
+
+            // Ensure that the token exists
+            if (!token) {
+              throw new Error("Token not found.");
+            }
+
+            // Now, using the correct token in the Authorization header
+            const res = await fetch(`${BASE_URL}/api/parse-and-add`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: "Bearer gigs2025tokenX107", // ⚠️ Replace if using .env!
+                Authorization: `Bearer ${token}`, // Correctly passing the token here
               },
-              body: JSON.stringify({ message }),
+              body: JSON.stringify({ message: emailText }),
             });
 
-            const data = await res.json();
-
-            if (res.ok) {
-              resultBox.innerText = `✅ Gig added: ${JSON.stringify(data.gig)}`;
-            } else {
-              resultBox.innerText = `❌ Error: ${
-                data.error || "Unknown error"
-              }`;
-            }
+            // Further code remains the same...
           } catch (err) {
-            resultBox.innerText = `❌ Network error: ${err.message}`;
+            console.error("Error occurred:", err);
           }
         });
     </script>

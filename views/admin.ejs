@@ -5,53 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin – UpGigs</title>
   <link rel="stylesheet" href="/css/upgigs.css" />
+  <script defer src="/js/parse-gig.js"></script>
+  <script defer src="/js/gig-actions.js"></script>
+  <script defer src="/js/admin.js"></script>
+  <script defer src="/js/toast.js"></script>
 </head>
-<body>
 
-  <!-- // Message for -->
+<body>
   <div class="toast" style="margin-bottom: 2rem;">
-    👋 Welcome, <strong><%= role === "admin" ? "Admin" : "Jon" %></strong>!
+    👋 Welcome, <strong><%= role === "admin" ? "Admin" : username %></strong>!
     <% if (role !== "admin") { %>
       <span style="opacity: 0.6;">You have limited access.</span>
     <% } %>
-    <a href="/" onclick="logout(event)" style="float: right; color: var(--accent); text-decoration: none; font-weight: bold;">
+    <a href="#" id="logout-link" style="float: right; color: var(--accent); text-decoration: none; font-weight: bold;">
       🚪 Logout
     </a>
   </div>
-  
 
   <% if (errorMessage) { %>
-    <div class="toast">
-      ⚠️ <%= errorMessage %>
-    </div>
+    <div class="toast">⚠️ <%= errorMessage %></div>
   <% } %>
-  
-
   <% if (savedGig) { %>
     <div class="toast">
       ✅ Saved gig for <strong><%= selected.replace('_', ' ') %></strong>:
       <code><%= savedGig.date %></code> – <%= savedGig.venue %>, <%= savedGig.city %>
     </div>
   <% } %>
-
   <% if (deletedGig) { %>
     <div class="toast" id="delete-alert">
       🗑 Deleted gig: <strong><%= deletedGig.date %></strong> – <%= deletedGig.venue %>, <%= deletedGig.city %>
       <form method="POST" action="/undo-delete" style="display: inline;">
-        <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
         <input type="hidden" name="artist" value="<%= selected %>" />
         <input type="hidden" name="gig" value='<%= JSON.stringify(deletedGig) %>' />
         <button type="submit" class="btn-accent" style="margin-left: 1rem;">↩️ Undo</button>
       </form>
     </div>
-    <script>
-      setTimeout(() => {
-        const alert = document.getElementById('delete-alert');
-        if (alert) alert.style.display = 'none';
-      }, 5000);
-    </script>
   <% } %>
-
   <% if (restoredGig) { %>
     <div class="toast">
       ↩️ Restored gig: <strong><%= restoredGig.date %></strong> – <%= restoredGig.venue %>, <%= restoredGig.city %>
@@ -62,26 +51,48 @@
     <h1>🎛 UpGigs Admin</h1>
 
     <% if (role === "admin") { %>
-    <form method="GET" action="/admin">
-      <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
-      <label for="artist">Choose an artist:</label>
-      <select name="artist" id="artist" class="dropdown" onchange="this.form.submit()">
-        <% artists.forEach(a => { %>
-          <option value="<%= a %>" <%= a === selected ? "selected" : "" %>>
-            <%= a.replace('_', ' ') %>
-          </option>
-        <% }) %>
-      </select>
-    </form>
+      <div style="margin: 1rem 0;">
+        <label for="artist">Choose an artist:</label>
+        <select name="artist" id="artist-switch" class="dropdown">
+          <% artists.forEach(u => { %>
+            <option value="<%= u.artist %>" <%= u.artist === selected ? "selected" : "" %>>
+              <%= u.displayName %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
     <% } %>
 
-    <hr style="margin: 2rem 0;" />
+    <div id="gig-section">
+      <hr style="margin: 2rem 0;" />
+      <h2>Current Gigs for <%= selected.replace('_', ' ') %></h2>
+ 
+      <div id="gig-list">
+      <% if (gigs.length > 0) { %>
+        <% gigs.forEach((gig, index) => { %>
+          <div class="gig-card">
+            <form class="delete-gig-form" style="float: right;" data-index="<%= index %>" data-artist="<%= selected %>">
+              <button type="submit" style="background: none; border: none; color: var(--accent); font-weight: bold; cursor: pointer;">
+                🗑 Delete
+              </button>
+            </form>
+            <strong><%= gig.date %></strong> – <%= gig.venue %>, <%= gig.city %>
+            <% if (gig.time) { %>
+              <div class="time">Time: <%= gig.time %></div>
+            <% } %>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <p>No gigs listed yet.</p>
+      <% } %>
+    </div>
+  </div>
 
-    <h2>🧠 Parse Gig Text</h2>
-    <form method="POST" action="/parse-gig">
-      <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
+    <hr style="margin: 2rem 0;" />
+    <h2>🫠 Parse Gig Text</h2>
+    <form id="parse-gig-form">
       <input type="hidden" name="artist" value="<%= selected %>" />
-      <textarea name="message" rows="4" placeholder="Paste a gig line..." style="width: 100%; margin-bottom: 1rem;"></textarea>
+      <textarea name="message" id="message" placeholder="Paste a gig line..."></textarea>
       <button type="submit" class="btn-accent">Parse with AI</button>
       <div id="ai-loader" class="loading hidden">⏳ Parsing with AI...</div>
     </form>
@@ -89,147 +100,45 @@
     <% if (parsedGig) { %>
       <h3>📝 Parsed Result</h3>
       <form method="POST" action="/save-gig" class="gig-card">
-        <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
         <input type="hidden" name="artist" value="<%= selected %>" />
-
         <label>Date</label>
         <input type="text" name="date" value="<%= parsedGig.date %>" required /><br />
-
         <label>Venue</label>
         <input type="text" name="venue" value="<%= parsedGig.venue %>" required /><br />
-
         <label>City</label>
         <input type="text" name="city" value="<%= parsedGig.city %>" required /><br />
-
         <label>Time</label>
         <input type="text" name="time" value="<%= (parsedGig.time || '').replace(/"/g, '&quot;') %>" /><br />
-
         <button type="submit" class="btn-accent" style="margin-top: 1rem;">✅ Confirm & Save</button>
-        <button type="button" class="btn-accent" onclick="cancelParsedForm(this)">
-          ❌ Cancel
-        </button>
-        
+        <button type="button" class="btn-accent cancel-btn">❌ Cancel</button>
       </form>
     <% } %>
 
     <% if (role === "admin" && parsedEmailGig) { %>
-    <hr style="margin: 3rem 0;" />
-    <h2>📧 Email Re-Parse Test</h2>
-    <form method="POST" action="/test-email">
-      <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
-      <input type="hidden" name="artist" value="<%= selected %>" />
-      <textarea name="emailBody" rows="6" placeholder="Paste full email here..." style="width: 100%; margin-bottom: 1rem;"></textarea>
-      <button type="submit" class="btn-accent">🧠 Test Email Parser</button>
-      <div id="email-loader" class="loading hidden">📩 Parsing email...</div>
-    </form>
-    <% } %>
+      <hr style="margin: 3rem 0;" />
+      <h2>📧 Email Re-Parse Test</h2>
+      <form method="POST" action="/test-email">
+        <input type="hidden" name="artist" value="<%= selected %>" />
+        <textarea name="emailBody" rows="6" placeholder="Paste full email here..." style="width: 100%; margin-bottom: 1rem;"></textarea>
+        <button type="submit" class="btn-accent">🫠 Test Email Parser</button>
+        <div id="email-loader" class="loading hidden">📩 Parsing email...</div>
+      </form>
 
-    <% if (role === "admin" && parsedEmailGig) { %>
       <h3>📝 Parsed From Email</h3>
       <form method="POST" action="/save-gig" class="gig-card">
-        <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
         <input type="hidden" name="artist" value="<%= selected %>" />
-
         <label>Date</label>
         <input type="text" name="date" value="<%= parsedEmailGig.date %>" required /><br />
-
         <label>Venue</label>
         <input type="text" name="venue" value="<%= parsedEmailGig.venue %>" required /><br />
-
         <label>City</label>
         <input type="text" name="city" value="<%= parsedEmailGig.city %>" required /><br />
-
         <label>Time</label>
         <input type="text" name="time" value="<%= (parsedEmailGig.time || '').replace(/"/g, '&quot;') %>" /><br />
-
         <button type="submit" class="btn-accent" style="margin-top: 1rem;">✅ Save This Gig</button>
-        <button type="button" class="btn-accent" onclick="cancelParsedForm(this)">
-          ❌ Cancel
-        </button>
+        <button type="button" class="btn-accent cancel-btn">❌ Cancel</button>
       </form>
     <% } %>
-
-    <hr style="margin: 3rem 0;" />
-    <h2>Current Gigs for <%= selected.replace('_', ' ') %></h2>
-    <% if (gigs.length > 0) { %>
-      <% gigs.forEach((gig, index) => { %>
-        <div class="gig-card">
-          <form method="POST" action="/delete-gig" style="float: right;">
-            <input type="hidden" name="token" value="<%= process.env.SECRET_TOKEN %>" />
-            <input type="hidden" name="artist" value="<%= selected %>" />
-            <input type="hidden" name="index" value="<%= index %>" />
-            <button type="submit" style="background: none; border: none; color: var(--accent); font-weight: bold; cursor: pointer;">
-              🗑 Delete
-            </button>
-          </form>
-
-          <strong><%= gig.date %></strong> – <%= gig.venue %>, <%= gig.city %>
-          <% if (gig.time) { %>
-            <div class="time">Time: <%= gig.time %></div>
-          <% } %>
-        </div>
-      <% }) %>
-    <% } else { %>
-      <p>No gigs listed yet.</p>
-    <% } %>
   </div>
-  <script>
-    const aiForm = document.querySelector('form[action="/parse-gig"]');
-    const emailForm = document.querySelector('form[action="/test-email"]');
-    const aiLoader = document.querySelector("#ai-loader");
-    const emailLoader = document.querySelector("#email-loader");
-
-    function logout(event) {
-    event.preventDefault();
-    window.location.href = "/";
-  }
-  
-    if (aiForm) {
-      aiForm.addEventListener("submit", () => {
-        aiLoader.classList.remove("hidden");
-      });
-    }
-  
-    if (emailForm) {
-      emailForm.addEventListener("submit", () => {
-        emailLoader.classList.remove("hidden");
-      });
-    }
-    function cancelParsedForm(btn) {
-    const form = btn.closest("form");
-    if (form) {
-      form.remove(); // 🧼 Remove the parsed result block
-    }
-  }
-// Cancel Parsed Form
-
-  function cancelParsedForm(btn) {
-    const form = btn.closest("form.gig-card");
-    if (!form) return;
-
-    // Animate out
-    form.classList.add("dismiss");
-
-    // Remove after animation completes
-    setTimeout(() => {
-      form.remove();
-    }, 300); // match duration in CSS
-  }
-
-  window.addEventListener("DOMContentLoaded", () => {
-    const newForms = document.querySelectorAll(".gig-card");
-    newForms.forEach(form => {
-      form.classList.add("animate-in");
-      const dateInput = form.querySelector("input[name='date']");
-      if (dateInput) dateInput.focus();
-    });
-  });
-</script>
-
- 
-
-
-
-  
 </body>
 </html>

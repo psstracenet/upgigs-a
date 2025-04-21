@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title><%= artist.replace('_',' ') %> – My Gigs</title>
+    <link rel="stylesheet" href="/css/upgigs.css" />
+  </head>
+  <body>
+    <h1>🎸 <%= artist.replace('_',' ') %> – Upcoming Shows</h1>
+    <p>Logged in as <strong><%= username %></strong></p>
+
+    <% if (errorMessage) { %>
+    <div class="toast"><%= errorMessage %></div>
+    <% } %> <% if (gigs.length) { %>
+    <ul>
+      <% gigs.forEach(g => { %>
+      <li>
+        <strong><%= g.date %></strong> – <%= g.venue %>, <%= g.city %> <% if
+        (g.time) { %> (<%= g.time %>) <% } %>
+      </li>
+      <% }) %>
+    </ul>
+    <% } else { %>
+    <p>No gigs yet.</p>
+    <% } %>
+
+    <a href="/" id="logout-link">Logout</a>
+    <script nonce="<%= nonce %>">
+      document.addEventListener("DOMContentLoaded", async () => {
+        const token = localStorage.getItem("jwtToken");
+
+        if (!token) {
+          alert("No token found. Redirecting to login.");
+          window.location.href = "/";
+          return;
+        }
+
+        const response = await fetch("/my-gigs", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          alert("Access denied: " + (error.message || "Unknown error"));
+          window.location.href = "/";
+          return;
+        }
+
+        const data = await response.json();
+        console.log("🎸 Loaded gigs:", data); // or use to populate your page
+      });
+    </script>
+  </body>
+</html>
