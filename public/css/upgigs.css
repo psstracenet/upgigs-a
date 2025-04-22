@@ -16,6 +16,8 @@
   /* Aliases */
   --border: var(--blue-500);
   --accent: var(--green-600);
+  --danger: #e74c3c;
+  --success: #2ecc40;
 }
 
 /* Reset & Base Layout */
@@ -97,9 +99,15 @@ label {
 
 /* Container */
 .container {
-  max-width: 1000px;
+  max-width: 1200px;         /* Allow container to expand more */
+  min-width: 340px;
+  min-height: 700px;
   margin: 0 auto;
-  padding: 5rem;
+  padding: 3rem 2rem;
+  /* background: var(--gray-100); */  /* Remove or comment out this line */
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  transition: min-height 0.2s, min-width 0.2s, max-width 0.2s;
 }
 
 /* Login Grid */
@@ -117,196 +125,163 @@ label {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 0 10px var(--gray-50);
-  text-align: center;
-  transition: transform 0.2s ease;
 }
 
-.login-card:hover {
-  transform: scale(1.02);
-  box-shadow: 0 0 14px var(--blue-300);
-}
-
-.band-name {
-  font-size: 1.3rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  color: var(--accent);
-}
-
-.btn-login {
-  background: var(--accent);
-  color: var(--background);
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.btn-login:hover {
-  box-shadow: 0 0 10px var(--accent);
-}
-
-/* Gig Card */
-.gig-card {
+/* Card Styles */
+.gig-card,
+.login-card {
   background: var(--gray-50);
   color: var(--foreground);
-  padding: 1rem 1.5rem;
-  margin: 1rem 0;
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 0 10px var(--gray-100);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.gig-card:hover {
-  transform: scale(1.02);
-  box-shadow: 0 0 14px var(--blue-300);
-}
-
-.gig-card input[type="text"],
-.gig-card textarea {
-  background: var(--gray-100);
-  color: var(--accent);
-  border: 1px solid var(--gray-400);
-  border-radius: 6px;
-  padding: 0.5rem;
-  margin: 0.25rem 0 1rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+  padding: 1.5rem 2.5rem;
+  margin: 1.5rem auto;
+  text-align: left;
+  transition: transform 0.18s, box-shadow 0.18s, max-width 0.2s;
+  display: block;
+  max-width: 1100px;  /* Wider than before */
   width: 100%;
-  font-size: 1rem;
-  transition: border-color 0.2s ease-in-out;
 }
 
-.gig-card input:focus,
-.gig-card textarea:focus {
-  border-color: var(--blue-300);
-  outline: none;
+.gig-card:hover,
+.login-card:hover {
+  transform: scale(1.015);
+  box-shadow: 0 4px 24px var(--blue-300);
 }
 
-.time {
-  font-size: 0.9rem;
-  color: var(--gray-400);
-}
-
-.btn-accent {
-  background: var(--gray-50);
+/* Optional: Card Headings */
+.gig-card h3,
+.login-card h3 {
   color: var(--accent);
-  border: 1px solid var(--blue-500);
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.2s;
+  margin-top: 0;
 }
 
-.btn-accent:hover {
-  transform: scale(1.02);
-  box-shadow: 0 0 14px var(--blue-300);
-}
-
-.btn-accent.cancel {
-  background: none;
-  color: var(--gray-400);
-  border: none;
-  font-weight: normal;
-  margin-left: 1rem;
-}
-
-.loading {
-  margin-top: 1rem;
-  color: var(--accent);
-  font-weight: bold;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.hidden {
-  display: none;
-}
-
-.toast {
-  background: var(--gray-100);
-  color: var(--accent);
-  padding: 1rem;
+/* Make form fields inside cards full width */
+.gig-card input[type="text"],
+.gig-card textarea,
+.login-card input[type="text"],
+.login-card textarea {
+  width: 100%;
   margin-bottom: 1rem;
-  border-left: 4px solid var(--accent);
+}
+
+/* Generic Button Styles */
+.btn, button {
+  background: var(--accent, #2d89ef);
+  color: #fff;
+  border: none;
   border-radius: 6px;
-  animation: fadeInOut 5s forwards;
-  z-index: 1000;
-  position: sticky;
-  top: 1rem;
+  padding: 0.5rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  transition: background 0.2s, box-shadow 0.2s;
+  outline: none;
+  margin: 0.25rem;
+}
+.btn-accent {
+  background: var(--accent, #2d89ef);
+  color: #fff;
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+.btn:disabled, button:disabled {
+  background: #e0e0e0;
+  color: #aaa;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* Pagination Controls */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+.pagination-controls button {
+  /* uses .btn styles */
+}
+.pagination-controls span {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--accent, #2d89ef);
+  background: #f7fafd;
+  border-radius: 6px;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--accent, #2d89ef);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
-@keyframes fadeInOut {
-  0% {
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    display: none;
-  }
+/* Toast Notifications */
+#toast-container {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  max-width: 90%;
+}
+.toast {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--accent, #2d89ef);
+  background: #fff;
+  color: #222;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  border-radius: 6px;
+  font-size: 1rem;
+  display: inline-block;
+  text-align: left;
 }
 
-@keyframes slideFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideFadeOut {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-}
-
-.gig-card.animate-in {
-  animation: slideFadeIn 0.4s ease-out;
-}
-
-.gig-card.dismiss {
-  animation: slideFadeOut 0.3s ease-in-out;
-  pointer-events: none;
-}
-
-/* Dropdown */
-.dropdown {
-  padding: 0.5rem;
+/* Dropdowns */
+select, .dropdown {
   background: var(--gray-100);
-  color: var(--accent);
+  color: var(--foreground);
   border: 1px solid var(--border);
   border-radius: 6px;
-  margin-left: 0.5rem;
+  padding: 0.5rem 1rem;
   font-size: 1rem;
+  margin-bottom: 1rem;
+  outline: none;
+  transition: border 0.2s;
+}
+select:focus, .dropdown:focus {
+  border-color: var(--accent);
 }
 
-/* Optional: fade-out animation */
-.fade-out {
-  opacity: 0;
-  transition: opacity 0.5s ease-out;
+/* Form Styles */
+input, textarea {
+  background: var(--gray-50);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  outline: none;
+  transition: border 0.2s;
+}
+input:focus, textarea:focus {
+  border-color: var(--accent);
+}
+
+/* Utility Classes */
+.text-center { text-align: center; }
+.mt-2 { margin-top: 2rem; }
+.mb-2 { margin-bottom: 2rem; }
+
+/* Responsive */
+@media (max-width: 700px) {
+  .container {
+    padding: 1rem;
+  }
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.1rem; }
 }

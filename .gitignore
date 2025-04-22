@@ -1,2 +1,6 @@
 .env
 runtime/gigs.json
+logs/parser.log
+public/logs/parser.log
+public/js/admin.js
+public/js/utils.js

@@ -1,3 +1,9 @@
+
+import { getCookie } from './utils.js';
+import { showToast } from './toast.js';
+
+
+
 document.addEventListener("DOMContentLoaded", () => {
   console.log("🧃 gig-actions.js loaded");
 
@@ -6,11 +12,18 @@ document.addEventListener("DOMContentLoaded", () => {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const token = localStorage.getItem("jwtToken");
-      if (!token) {
-        alert("JWT token missing!");
-        return;
-      }
+     // Use the same getCookie function as in admin.js
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(";").shift();
+  return null;
+}
+const token = getCookie("token");
+if (!token) {
+  alert("JWT token missing!");
+  return;
+}
 
       const artist = form.dataset.artist;
       const index = form.dataset.index;
@@ -20,9 +33,9 @@ document.addEventListener("DOMContentLoaded", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ artist, index }),
+          credentials: "same-origin", // Ensure cookies are sent with the request
         });
 
         const result = await response.json();
@@ -52,7 +65,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const gig = JSON.parse(e.target.dataset.gig);
     const artist = e.target.dataset.artist;
-    const token = localStorage.getItem("jwtToken");
+    // const token = localStorage.getItem("jwtToken");
+    const token = getCookie("token");
+    if (!token) {
+      alert("JWT token missing!");
+      return;
+    }
 
     // ✅ Save current artist selection before undo
     const artistSelect = document.getElementById("artist-switch");

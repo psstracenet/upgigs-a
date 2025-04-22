@@ -13,6 +13,7 @@ import cors from "cors";
 import util from "util";
 import crypto from "crypto";
 import cookieParser from "cookie-parser";
+import bcrypt from "bcrypt";
 
 // Load env vars
 dotenv.config();
@@ -235,12 +236,6 @@ app.get("/", (req, res) => {
   });
 });
 
-// Logout
-// function logout() {
-//   localStorage.removeItem("jwtToken");
-//   window.location.href = "/";
-// }
-
 // Route: Login
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
@@ -258,10 +253,10 @@ app.post("/login", (req, res) => {
 
   // ✅ Set secure cookie
   res.cookie("token", token, {
-    httpOnly: true,
+    // httpOnly: true, // REMOVED to allow JS access
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 1000,
+    maxAge: 60 * 60 * 1000, // 1 hour
   });
 
   res.json({ success: true });
@@ -299,29 +294,6 @@ app.get("/my-gigs", authenticateJWT, async (req, res) => {
     });
   }
 });
-// // Route: Redirect
-// app.get("/redirect", (req, res) => {
-//   const nonce = res.locals.nonce || "";
-//   res.send(`
-//     <!DOCTYPE html>
-//     <html>
-//       <head><title>Redirecting...</title></head>
-//       <body>
-//         <script nonce="${nonce}">
-//   const token = localStorage.getItem("jwtToken");
-//   if (!token) {
-//     alert("No token found.");
-//     window.location.href = "/";
-//   } else {
-//     // ✅ Use real browser redirect — no fetch, no DOM rewrite
-//     window.location.href = "/admin";
-//   }
-// </script>
-
-//       </body>
-//     </html>
-//   `);
-// });
 
 // Function to get user data by username
 function getUserByUsername(username) {
@@ -332,65 +304,51 @@ function getUserByUsername(username) {
 app.get("/admin", authenticateJWT, async (req, res) => {
   const { artist: userArtist, role, username } = req.user;
   const selected = req.query.artist || userArtist;
-
-  console.log("🧠 Requested artist:", selected);
+  const page = parseInt(req.query.page, 10) || 1;
+  const gigsPerPage = 5;
 
   const filePath = path.join(__dirname, "data", selected, "gigs.json");
-
-  const restoredGig = req.query.restoredGig
-    ? JSON.parse(decodeURIComponent(req.query.restoredGig))
-    : null;
+  let gigs = [];
+  let totalPages = 1;
 
   try {
     const dbArtist = new Low(new JSONFile(filePath), { gigs: [] });
     await dbArtist.read();
+    gigs = dbArtist.data.gigs || [];
+    totalPages = Math.max(1, Math.ceil(gigs.length / gigsPerPage));
+    const pagedGigs = gigs.slice((page - 1) * gigsPerPage, page * gigsPerPage);
 
-    const gigs = dbArtist.data.gigs;
-
-    // ✅ PARTIAL RESPONSE: only send gig-section if requested via JS fetch
-    if (req.headers["x-requested-with"] === "XMLHttpRequest") {
-      return res.render("partials/gig-section", { selected, gigs });
-    }
-
-    console.log("🧪 Accept header:", req.headers.accept);
-
-    // ✅ FULL PAGE RESPONSE
     res.render("admin", {
-      nonce: res.locals.nonce,
       username,
       role,
-      artists: users.map((u) => ({
-        artist: u.artist,
-        displayName: u.displayName || u.artist.replace("_", " "),
-      })),
+      artists: users,
       selected,
-      gigs,
-      parsedGig: null,
-      parsedEmailGig: null,
-      savedGig: null,
-      deletedGig: null,
-      restoredGig,
+      gigs: pagedGigs,
+      page,
+      totalPages,
       errorMessage: null,
-    });
-  } catch (err) {
-    console.error("⚠️ Admin load error:", err);
-
-    res.render("admin", {
-      nonce: res.locals.nonce,
-      username,
-      role,
-      artists: users.map((u) => ({
-        artist: u.artist,
-        displayName: u.displayName || u.artist.replace("_", " "),
-      })),
-      selected,
-      gigs: [],
-      parsedGig: null,
-      parsedEmailGig: null,
       savedGig: null,
       deletedGig: null,
       restoredGig: null,
-      errorMessage: "Failed to load gigs.",
+      parsedGig: null,
+      parsedEmailGig: null,
+    });
+  } catch (err) {
+    console.error("⚠️ Failed to load gigs:", err);
+    res.render("admin", {
+      username,
+      role,
+      artists: users,
+      selected,
+      gigs: [],
+      page: 1,
+      totalPages: 1,
+      errorMessage: "Could not load gigs.",
+      savedGig: null,
+      deletedGig: null,
+      restoredGig: null,
+      parsedGig: null,
+      parsedEmailGig: null,
     });
   }
 });
@@ -580,16 +538,18 @@ app.post("/save-gig", authenticateJWT, async (req, res) => {
 
 // Route: Delete Gig
 app.post("/delete-gig", authenticateJWT, async (req, res) => {
-  // Destructure role and username from req.user (from JWT)
   const { role, username } = req.user;
-
   const { artist, index } = req.body;
 
-  // Validate the required fields
+  // Validate required fields
   if (!artist || index === undefined) {
-    return res
-      .status(400)
-      .json({ error: "Missing required fields: artist or index." });
+    return res.status(400).json({ error: "Missing required fields: artist or index." });
+  }
+
+  // Coerce index to a number
+  const idx = Number(index);
+  if (isNaN(idx) || idx < 0) {
+    return res.status(400).json({ error: "Invalid index provided." });
   }
 
   const filePath = path.join(__dirname, "data", artist, "gigs.json");
@@ -597,22 +557,24 @@ app.post("/delete-gig", authenticateJWT, async (req, res) => {
   const dbArtist = new Low(adapter, { gigs: [] });
 
   try {
-    await dbArtist.read(); // Read the database
+    await dbArtist.read();
+    const gigs = dbArtist.data.gigs;
 
-    const i = parseInt(index, 10); // Parse the index to an integer
-    if (i < 0 || i >= dbArtist.data.gigs.length) {
-      return res.status(400).json({ error: "Invalid gig index" });
+    if (idx >= gigs.length) {
+      return res.status(400).json({ error: "Invalid index. No gig found at that index." });
     }
 
-    const deletedGig = dbArtist.data.gigs.splice(i, 1); // Remove the gig at the given index
-    await dbArtist.write(); // Write the updated data back to the database
+    // Defensive: ensure deletedGig exists
+    const deletedGig = gigs.splice(idx, 1)[0];
+    if (!deletedGig) {
+      return res.status(500).json({ error: "Gig could not be deleted." });
+    }
+    await dbArtist.write();
 
-    // Render the admin page with the gig deleted message
-
-    res.json({ deleted: deletedGig[0] });
+    res.json({ message: "Gig deleted successfully.", deletedGig });
   } catch (err) {
-    console.error("❌ Error deleting gig:", err);
-    return res.status(500).json({ error: "Failed to delete gig" });
+    console.error("Error deleting gig:", err);
+    res.status(500).json({ error: "Failed to delete gig." });
   }
 });
 

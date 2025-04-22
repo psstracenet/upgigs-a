@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin – UpGigs</title>
-  <link rel="stylesheet" href="/css/upgigs.css" />
-  <script defer src="/js/parse-gig.js"></script>
-  <script defer src="/js/gig-actions.js"></script>
-  <script defer src="/js/admin.js"></script>
-  <script defer src="/js/toast.js"></script>
-</head>
-
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin – UpGigs</title>
+    <link rel="stylesheet" href="/css/upgigs.css" />
+    <script type="module" src="/js/toast.js"></script>
+    <script type="module" src="/js/parse-gig.js"></script>
+    <script type="module" src="/js/gig-actions.js"></script>
+    <script type="module" src="/js/admin.js"></script>
+    <script nonce="<%= nonce %>"></script>
+  </head>
 <body>
+  <!-- Welcome Toast -->
   <div class="toast" style="margin-bottom: 2rem;">
     👋 Welcome, <strong><%= role === "admin" ? "Admin" : username %></strong>!
     <% if (role !== "admin") { %>
@@ -25,12 +26,14 @@
   <% if (errorMessage) { %>
     <div class="toast">⚠️ <%= errorMessage %></div>
   <% } %>
+
   <% if (savedGig) { %>
     <div class="toast">
       ✅ Saved gig for <strong><%= selected.replace('_', ' ') %></strong>:
       <code><%= savedGig.date %></code> – <%= savedGig.venue %>, <%= savedGig.city %>
     </div>
   <% } %>
+
   <% if (deletedGig) { %>
     <div class="toast" id="delete-alert">
       🗑 Deleted gig: <strong><%= deletedGig.date %></strong> – <%= deletedGig.venue %>, <%= deletedGig.city %>
@@ -41,6 +44,7 @@
       </form>
     </div>
   <% } %>
+
   <% if (restoredGig) { %>
     <div class="toast">
       ↩️ Restored gig: <strong><%= restoredGig.date %></strong> – <%= restoredGig.venue %>, <%= restoredGig.city %>
@@ -48,47 +52,21 @@
   <% } %>
 
   <div class="container">
-    <h1>🎛 UpGigs Admin</h1>
-
-    <% if (role === "admin") { %>
-      <div style="margin: 1rem 0;">
-        <label for="artist">Choose an artist:</label>
-        <select name="artist" id="artist-switch" class="dropdown">
-          <% artists.forEach(u => { %>
-            <option value="<%= u.artist %>" <%= u.artist === selected ? "selected" : "" %>>
-              <%= u.displayName %>
-            </option>
-          <% }) %>
-        </select>
-      </div>
-    <% } %>
-
-    <div id="gig-section">
-      <hr style="margin: 2rem 0;" />
-      <h2>Current Gigs for <%= selected.replace('_', ' ') %></h2>
- 
-      <div id="gig-list">
-      <% if (gigs.length > 0) { %>
-        <% gigs.forEach((gig, index) => { %>
-          <div class="gig-card">
-            <form class="delete-gig-form" style="float: right;" data-index="<%= index %>" data-artist="<%= selected %>">
-              <button type="submit" style="background: none; border: none; color: var(--accent); font-weight: bold; cursor: pointer;">
-                🗑 Delete
-              </button>
-            </form>
-            <strong><%= gig.date %></strong> – <%= gig.venue %>, <%= gig.city %>
-            <% if (gig.time) { %>
-              <div class="time">Time: <%= gig.time %></div>
-            <% } %>
-          </div>
+    <!-- Static Section (title, dropdown, divider) -->
+    <div class="static-section">
+      <h1>🎛 UpGigs Admin</h1>
+      <label for="artist">Choose an artist:</label>
+      <select name="artist" id="artist-switch" class="dropdown">
+        <% artists.forEach(u => { %>
+          <option value="<%= u.artist %>" <%= u.artist === selected ? "selected" : "" %>>
+            <%= u.displayName %>
+          </option>
         <% }) %>
-      <% } else { %>
-        <p>No gigs listed yet.</p>
-      <% } %>
+      </select>
+      <hr style="margin: 2rem 0;" />
     </div>
-  </div>
 
-    <hr style="margin: 2rem 0;" />
+    <!-- Gig Parsing Section -->
     <h2>🫠 Parse Gig Text</h2>
     <form id="parse-gig-form">
       <input type="hidden" name="artist" value="<%= selected %>" />
@@ -139,6 +117,39 @@
         <button type="button" class="btn-accent cancel-btn">❌ Cancel</button>
       </form>
     <% } %>
+
+    <!-- Dynamic Section (Event List) -->
+        <!-- Dynamic Section (Event List) -->
+        <div class="dynamic-section" id="gig-section">
+          <h2>Current Gigs for <%= selected.replace('_', ' ') %></h2>
+          <div id="event-list-container" style="min-height: 500px;">
+            <% if (gigs.length > 0) { %>
+              <% gigs.forEach((gig, index) => { %>
+                <div class="gig-card">
+                  <form class="delete-gig-form" style="float: right;" data-index="<%= index + (page - 1) * 5 %>" data-artist="<%= selected %>">
+                    <input type="hidden" name="artist" value="<%= selected %>" />
+                    <input type="hidden" name="index" value="<%= index + (page - 1) * 5 %>" />
+                    <button type="submit" style="background: none; border: none; color: var(--accent); font-weight: bold; cursor: pointer;">
+                      🗑 Delete
+                    </button>
+                  </form>
+                  <strong><%= gig.date %></strong> – <%= gig.venue %>, <%= gig.city %>
+                  <% if (gig.time) { %>
+                    <div class="time">Time: <%= gig.time %></div>
+                  <% } %>
+                </div>
+              <% }) %>
+            <% } else { %>
+              <p>No gigs listed yet.</p>
+            <% } %>
+          </div>
+          <!-- Pagination Controls -->
+          <div class="pagination-controls" style="text-align:center; margin-top:1rem;">
+            <button id="prev-page" <%= page <= 1 ? "disabled" : "" %>>Prev</button>
+            <span>Page <%= page %> of <%= totalPages %></span>
+            <button id="next-page" <%= page >= totalPages ? "disabled" : "" %>>Next</button>
+          </div>
+        </div>
   </div>
 </body>
 </html>

@@ -1,22 +1,46 @@
 {
   "gigs": [
     {
-      "date": "2025-07-22",
-      "venue": "Barnies",
-      "city": "Morganton",
-      "time": "8pm"
-    },
-    {
-      "date": "2025-04-20",
-      "venue": "Lids",
-      "city": "Morganton",
+      "date": "2025-07-25",
+      "venue": "Lunar Lounge",
+      "city": "Asheville",
       "time": "9pm"
     },
     {
-      "date": "2025-07-22",
-      "venue": "Barnies",
-      "city": "Morganton",
+      "date": "2025-08-08",
+      "venue": "Starlight Bar",
+      "city": "Charlotte",
       "time": "8pm"
+    },
+    {
+      "date": "2025-08-22",
+      "venue": "Moonbase Cafe",
+      "city": "Raleigh",
+      "time": "8:30pm"
+    },
+    {
+      "date": "2025-09-05",
+      "venue": "Orbit Room",
+      "city": "Durham",
+      "time": "9pm"
+    },
+    {
+      "date": "2025-09-19",
+      "venue": "Gravity Grill",
+      "city": "Greensboro",
+      "time": "7:30pm"
+    },
+    {
+      "date": "2025-10-03",
+      "venue": "Celestial Stage",
+      "city": "Winston-Salem",
+      "time": "8pm"
+    },
+    {
+      "date": "2025-10-17",
+      "venue": "Astro Hall",
+      "city": "Fayetteville",
+      "time": "8:30pm"
     }
   ]
 }

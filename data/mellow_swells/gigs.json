@@ -1,9 +1,33 @@
 {
   "gigs": [
     {
-      "date": "2025-07-22",
-      "venue": "Barnies",
-      "city": "Morganton",
+      "date": "2025-08-05",
+      "venue": "The Blue Note",
+      "city": "Asheville",
+      "time": "9pm"
+    },
+    {
+      "date": "2025-09-02",
+      "venue": "Riverfront Bar",
+      "city": "Greenville",
+      "time": "8pm"
+    },
+    {
+      "date": "2025-09-16",
+      "venue": "Jazz Cellar",
+      "city": "Winston-Salem",
+      "time": "8:30pm"
+    },
+    {
+      "date": "2025-09-30",
+      "venue": "The Groove Room",
+      "city": "Durham",
+      "time": "9pm"
+    },
+    {
+      "date": "2025-10-14",
+      "venue": "Echo Hall",
+      "city": "Raleigh",
       "time": "8pm"
     }
   ]
